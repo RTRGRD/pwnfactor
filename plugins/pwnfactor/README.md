@@ -8,15 +8,16 @@ Composable skills for building features with Claude Code agents, plus the subage
 | `run` | Lifecycle spine: Frame → Plan → Build → Verify → Integrate | Any non-trivial change |
 | `swarm` | The build loop: deliberate subagent fan-out | Substantial features worth the coordination cost |
 | `gg` | The verify gate: risk-routed multi-agent review | After a feature, before merge |
+| `validate` | The proof gate: check the change against a ground-truth oracle, not just the diff | After `gg`, before ship |
 | `ci` | Wire + verify CI/CD (tailored tests, `@claude`, weekly security) | Setting up or fixing CI |
-| `sweep` / `yomom` | Pre-prod security battery → GO/NO-GO | Before a release / prod push |
+| `sweep` | Pre-prod security battery → GO/NO-GO | Before a release / prod push |
 
 Subagents (in `agents/`):
 
-- `panel-code-review` — correctness / bugs / races / contract drift
-- `panel-simplifier` — reuse / dead code / altitude (quality only, no bug hunting)
-- `panel-security` — injection / authz / secrets / safety rails
-- `security-auditor` — OWASP attacker-mindset reviewer (used by `sweep`)
+- `panel-code-review` - correctness / bugs / races / contract drift
+- `panel-simplifier` - reuse / dead code / altitude (quality only, no bug hunting)
+- `panel-security` - injection / authz / secrets / safety rails
+- `security-auditor` - OWASP attacker-mindset reviewer (used by `sweep`)
 
 ## Design principles (baked in)
 

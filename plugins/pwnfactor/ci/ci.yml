@@ -16,4 +16,4 @@ jobs:
       lint-cmd: ""         # e.g. "ruff check apps/server"
       typecheck-cmd: ""    # e.g. "pnpm -C apps/desktop exec tsc --noEmit"
       test-cmd: ""         # e.g. "pytest apps/server -q && pnpm -C apps/desktop exec vitest run && python packages/shared/tests/test_ts_parity.py"
-    # Pin @v0.1.1 to a tag/SHA you maintain (supply-chain hygiene) — don't float on a branch.
+    # Pin @v0.1.1 to a tag/SHA you maintain (supply-chain hygiene) - don't float on a branch.

@@ -1,4 +1,4 @@
-# pwnfactor is a cross-platform Claude Code plugin — store AND check out all text
+# pwnfactor is a cross-platform Claude Code plugin - store AND check out all text
 # as LF everywhere (Mac / Linux / Windows), so there's no CRLF treadmill and diffs
 # stay clean. (The instance repos that point at this plugin learned the hard way.)
 * text=auto eol=lf

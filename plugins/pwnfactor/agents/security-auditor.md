@@ -104,14 +104,14 @@ Use the security-auditor agent to analyze the IPC / preload surface
 
 Before auditing, identify the stack and aim at its highest-leverage surfaces:
 
-- **Electron / Tauri / desktop** — IPC handlers (validate ALL input crossing the renderer↔main / JS↔Rust
+- **Electron / Tauri / desktop** - IPC handlers (validate ALL input crossing the renderer↔main / JS↔Rust
   boundary), preload / context-isolation exposure, the allowlist/CSP, `shell.openExternal` / shell
   command sinks, auto-update integrity, secret storage at rest, and any device/credential egress.
-- **Web app / API** — authn & authz on every route (not just the UI), injection sinks, SSRF, CORS/CSP,
+- **Web app / API** - authn & authz on every route (not just the UI), injection sinks, SSRF, CORS/CSP,
   session & cookie flags, rate limiting, and mass-assignment.
-- **Library / SDK** — the public API as an attack surface: deserialization, path handling, ReDoS,
+- **Library / SDK** - the public API as an attack surface: deserialization, path handling, ReDoS,
   and unsafe defaults that downstream users inherit.
-- **Any stack** — secret handling, dependency integrity (lockfiles + SBOM), logging that might leak
+- **Any stack** - secret handling, dependency integrity (lockfiles + SBOM), logging that might leak
   sensitive data, and the data-egress chokepoints (what leaves the process, and is it sanitized first?).
 
 Pair with the `/security-audit` harness: it produces the SBOM/CVE/secret/static evidence; you provide

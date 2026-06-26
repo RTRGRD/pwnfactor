@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""pwnfactor stop-hook gate verifier — FAIL-OPEN, loop-safe.
+"""pwnfactor stop-hook gate verifier - FAIL-OPEN, loop-safe.
 
 Fires on Stop (only where the pwnfactor plugin is enabled). If the working tree has
 uncommitted CODE changes that haven't passed /pwnfactor:gg (no fresh .pwnfactor/gate.json

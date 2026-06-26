@@ -1,16 +1,16 @@
-# Orchestration profile — Webcart (worked example)
+# Orchestration profile - Webcart (worked example)
 
-A worked instance of `orchestration-profile.template.md` — a **fictional e-commerce SaaS**, to show a
+A worked instance of `orchestration-profile.template.md` - a **fictional e-commerce SaaS**, to show a
 filled-in profile. Your project's specifics differ; the SHAPE is what ports. Copy the template to
 `.claude/orchestration-profile.md` and fill it for your repo.
 
 ## Components & parallel seams
 - **Components:** `apps/api` (Node/TS backend), `apps/web` (React/TS storefront), `packages/shared` (TS contracts shared by both).
-- **Single-slot:** ALL of `apps/web` shares one pnpm/node_modules/build — one agent at a time, never two web agents or both running `pnpm`. api-vs-web is the real parallel seam.
+- **Single-slot:** ALL of `apps/web` shares one pnpm/node_modules/build - one agent at a time, never two web agents or both running `pnpm`. api-vs-web is the real parallel seam.
 
 ## Shared-contract barrier
 - **Location:** `packages/shared`.
-- **Sync rule:** the API DTOs and the web client types are hand-mirrored (NOT codegen); update both barrels (`packages/shared/src/api.ts` ↔ the web client's `types.ts`), any shared enum (e.g. `OrderStatus`), and pass `packages/shared/tests/parity.test.ts`. One agent owns `packages/shared` per feature — two corrupt the barrels/enum even in separate worktrees.
+- **Sync rule:** the API DTOs and the web client types are hand-mirrored (NOT codegen); update both barrels (`packages/shared/src/api.ts` ↔ the web client's `types.ts`), any shared enum (e.g. `OrderStatus`), and pass `packages/shared/tests/parity.test.ts`. One agent owns `packages/shared` per feature - two corrupt the barrels/enum even in separate worktrees.
 
 ## Migration ritual
 - **Tool:** Prisma (Postgres).
@@ -18,10 +18,10 @@ filled-in profile. Your project's specifics differ; the SHAPE is what ports. Cop
 - **After:** re-seed the demo DB before any consumer validates the live backend.
 
 ## Mutation & rollback model
-- **Rails:** the destructive/irreversible action here is a **payment refund** — idempotency-key + checkpoint-before-apply + a separate reversal.
+- **Rails:** the destructive/irreversible action here is a **payment refund** - idempotency-key + checkpoint-before-apply + a separate reversal.
 - **Semantics:** `refundOrder(orderId, idempotencyKey)` is operator/API-initiated; a refund records a `RefundLog` row; a failed refund marks the order `REFUND_FAILED` (NOT auto-reversed) and is not re-refundable until reconciled. The reversal is a separate call, verified by reading the payment processor's state back.
 - **Proof of green (payment-mutating unit):** a test drives (a) a dry-run/preview = no charge; (b) the refund records a `RefundLog`; (c) re-invoking with the SAME idempotency-key is a no-op (not a double refund); (d) the audit trail is metadata-only (no card data). Asserting the rail merely "exists" is RED.
-- A new payment method = a `PaymentProvider` adapter (rides the existing flow). A new capability (e.g. partial refunds) = a new state in the order state machine — bigger.
+- A new payment method = a `PaymentProvider` adapter (rides the existing flow). A new capability (e.g. partial refunds) = a new state in the order state machine - bigger.
 
 ## Hotspot files (never split across parallel agents)
 `apps/api/src/payments/service.ts`, `apps/api/src/orders/engine.ts`, the two `packages/shared` barrels, `apps/api/src/audit.ts`.
@@ -37,7 +37,7 @@ filled-in profile. Your project's specifics differ; the SHAPE is what ports. Cop
 - **Typecheck:** `pnpm -r exec tsc --noEmit`.
 
 ## Ground-truth oracle (what `/pwnfactor:validate` reads)
-- **Oracle:** a **staging URL** — a real request against the deployed staging API returns the real response (cloud-reachable, so validation can run in CI). For a payment change: hit the staging refund endpoint with a test card and read the processor's sandbox state back. Read ITS verdict, not your classifier's.
+- **Oracle:** a **staging URL** - a real request against the deployed staging API returns the real response (cloud-reachable, so validation can run in CI). For a payment change: hit the staging refund endpoint with a test card and read the processor's sandbox state back. Read ITS verdict, not your classifier's.
 
 ## Project-specific risk signals (HIGH beyond the defaults)
 the **payments / billing path**, auth / sessions, the webhook handlers (signature verification), any PII export.

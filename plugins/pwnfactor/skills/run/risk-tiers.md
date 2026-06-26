@@ -18,7 +18,7 @@ Otherwise it is **ROUTINE**: UI, internal refactors, docs, additive pure functio
 
 | Dimension | ROUTINE | HIGH |
 |---|---|---|
-| Reasoning effort | medium–high | high–max |
+| Reasoning effort | medium-high | high-max |
 | Review-panel model | Sonnet | Opus |
 | Codex review | regular (if available) | adversarial (if available) |
 | Panel verdict bar | block on CRITICAL | block on CRITICAL **or** HIGH on the risky surface |
@@ -27,4 +27,4 @@ Otherwise it is **ROUTINE**: UI, internal refactors, docs, additive pure functio
 
 ## Notes
 - Tier is about **blast radius and reversibility**, not size. A 3-line change to an authz check is HIGH; a 300-line UI refactor is ROUTINE.
-- A change can be mostly ROUTINE with one HIGH file — tier the **riskiest** surface and review that part at HIGH.
+- A change can be mostly ROUTINE with one HIGH file - tier the **riskiest** surface and review that part at HIGH.

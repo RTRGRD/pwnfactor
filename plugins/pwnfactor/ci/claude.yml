@@ -16,7 +16,7 @@ jobs:
       contains(github.event.comment.body, '@claude') &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
-    permissions:                 # least privilege — drop any your usage doesn't need
+    permissions:                 # least privilege - drop any your usage doesn't need
       contents: write            # only if the action pushes fixes; otherwise 'read'
       pull-requests: write
       issues: write
