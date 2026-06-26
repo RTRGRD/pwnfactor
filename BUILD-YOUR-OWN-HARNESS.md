@@ -5,11 +5,11 @@ Paste this whole file as a prompt to a Claude Code agent running **in the target
 ---
 
 ## Your mission
-Build a Claude Code **plugin** (a self-contained marketplace) packaging THIS repo's engineering discipline: a feature lifecycle, deliberate subagent orchestration, a risk-routed multi-agent review panel, interactive onboarding, and (if applicable) a pre-prod security sweep. Model it on the reference harness `pwnfactor` at `<PATH-TO-PWNFACTOR-REPO>` - copy its **structure and method, NOT its content**. Every example, barrier, and path must come from THIS repo.
+Build a Claude Code **plugin** (a self-contained marketplace) packaging THIS repo's engineering discipline: a feature lifecycle, deliberate subagent orchestration, a risk-routed multi-agent review panel, a ground-truth validation gate, interactive onboarding, and (if applicable) a pre-prod security sweep. Model it on the reference harness `pwnfactor` at `<PATH-TO-PWNFACTOR-REPO>` - copy its **structure and method, NOT its content**. Every example, barrier, and path must come from THIS repo.
 
 ## Reference (study first; do not copy verbatim)
 Read `<PATH>/plugins/pwnfactor/`:
-- `skills/{boot,run,swarm,gg,sweep}/SKILL.md` - the skills + their method.
+- `skills/{boot,run,swarm,gg,validate,sweep}/SKILL.md` - the skills + their method.
 - `agents/*.md` - the review-panel reviewers.
 - `skills/boot/orchestration-profile.template.md` - the per-project profile schema.
 - `hooks/` - the fail-open stop-hook gate. `ci/` + `.github/workflows/` - portable CI. `scripts/validate_plugin.py` - the validator.
@@ -34,7 +34,7 @@ Layout (forward slashes; ONLY `plugin.json` in `.claude-plugin/`; skills/agents/
   .claude-plugin/marketplace.json
   plugins/<name>/
     .claude-plugin/plugin.json
-    skills/<onboard|lifecycle|orchestrate|review|sweep>/SKILL.md
+    skills/<onboard|lifecycle|orchestrate|review|validate|sweep>/SKILL.md
     agents/<code-review|simplifier|security>.md
     hooks/hooks.json + gate-check.py        # optional gate
     ci/...
@@ -47,6 +47,7 @@ Layout (forward slashes; ONLY `plugin.json` in `.claude-plugin/`; skills/agents/
    - **lifecycle** - Frame → Plan → Build → Verify → Integrate.
    - **orchestrate** - deliberate subagent fan-out: **default SOLO for *mutating* work**; **read-only fan-out (scouts/research/skeptics) is the lead's free discretion**; worktree isolation (`isolation:"worktree"`); builders never `git commit`; barriers serialize shared-contract + migration units; **don't trust subagent output - re-verify load-bearing claims against the code**; pipeline-merge ready units; hand a green diff to the review gate. Load specifics from the profile.
    - **review** (the panel) - classify risk → fan out 3 reviewers (code-review/simplifier/security) **in parallel** on the diff → optional Codex (`/codex:review` or `/codex:adversarial-review` for high-risk) → dedupe + cross-verify (a finding survives only if it holds against the code) → **ship / fix-then-ship / block** + written report.
+   - **validate** (the proof gate) - prove the change WORKS against a project-defined ground-truth oracle (the real runtime / staging / data-store accepts it), not just that the diff reads right. The differentiator over a pure code review; bind the oracle at onboard.
    - **sweep** (only if you have a security battery) - pre-prod; offered before prod/big builds; GO/NO-GO; read-only.
 4. **Agents** - code-review (logic bugs / races / boundaries / contract drift), simplifier (reuse / dead code / altitude - NOT bug-hunting), security (injection / authz / secrets / traversal / rails). Read-only tools; `model: inherit` (the panel chooses the tier).
 5. **CI** - a reusable workflow (auto-detect this stack's test/lint) + an `@claude` handler **gated to trusted actors** (`OWNER`/`MEMBER`/`COLLABORATOR`) with least-privilege permissions.

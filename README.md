@@ -12,6 +12,15 @@ The `pwnfactor` plugin adds three composable skills:
 
 Mental model: **orchestration is the build loop, the panel is the verify gate, both hang off the lifecycle spine.**
 
+## The rest of the loadout
+
+Around that core sit four supporting skills:
+
+- **`/pwnfactor:boot`** - onboard a repo once: it builds the orchestration profile, the `CLAUDE.md` gate contract, CI, and the security toolchain, then proves value on a real diff.
+- **`/pwnfactor:validate`** - the proof gate: check a change against a **ground-truth oracle** (did the REAL thing accept it?), not just review the diff. A green test suite is a claim until the real runtime, staging URL, or data store confirms it.
+- **`/pwnfactor:sweep`** - a read-only **pre-prod security battery**: stack-aware static scan, SBOM + CVE, secret scan, optional Codex adversarial review, and (for a shipping binary) a local-AV-gated malware-reputation check, ending in GO / NO-GO.
+- **`/pwnfactor:ci`** - wire and verify CI/CD: tests tailored to your stack, an actor-gated `@claude` handler, and a weekly security scan.
+
 ## Install (in any project)
 
 ```
@@ -48,4 +57,4 @@ Or register this repo as a **local** marketplace:
 
 ## Onboarding a new project
 
-Run **`/pwnfactor:boot`** - it interviews the repo and sets up the orchestration profile, the `CLAUDE.md` gate contract, and CI, then teaches the three commands and proves value on a real diff.
+Run **`/pwnfactor:boot`** - it interviews the repo and sets up the orchestration profile, the `CLAUDE.md` gate contract, CI, and the security toolchain, then teaches the full command loadout and proves value on a real diff.
