@@ -1,0 +1,47 @@
+# Onboarding template -> copy to a project's .github/workflows/security.yml
+# Weekly dependency-vulnerability scan: the sweep's dependency teeth, automated.
+# Informational (does not fail the build on advisories) -- the real GO/NO-GO is /pwnfactor:sweep at prod.
+name: security
+on:
+  schedule:
+    - cron: "0 13 * * 1"   # Mondays 13:00 UTC
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect python
+        id: py
+        shell: bash
+        run: echo "present=$([ -f pyproject.toml ] || [ -f requirements.txt ] || [ -f setup.py ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        if: steps.py.outputs.present == 'true'
+        with:
+          python-version: "3.11"
+      - name: pip-audit
+        if: steps.py.outputs.present == 'true'
+        shell: bash
+        run: |
+          python -m pip install -U pip pip-audit
+          pip-audit || true     # report advisories; don't fail the weekly scan
+
+      - name: npm audit (production deps)
+        if: hashFiles('package.json') != ''
+        shell: bash
+        run: npm audit --omit=dev || true
+
+      - name: Syft SBOM + Grype CVE (all ecosystems)
+        shell: bash
+        env:
+          SYFT_VERSION: v1.45.1      # pinned: installer script + binary from an immutable tag, not main
+          GRYPE_VERSION: v0.114.0    # (for max hardening, swap to SHA-pinned anchore/sbom-action + scan-action)
+        run: |
+          BIN="$RUNNER_TEMP/bin"; mkdir -p "$BIN"
+          curl -sSfL "https://raw.githubusercontent.com/anchore/syft/$SYFT_VERSION/install.sh"   | sh -s -- -b "$BIN" "$SYFT_VERSION"  >/dev/null
+          curl -sSfL "https://raw.githubusercontent.com/anchore/grype/$GRYPE_VERSION/install.sh" | sh -s -- -b "$BIN" "$GRYPE_VERSION" >/dev/null
+          "$BIN/syft" dir:. -o cyclonedx-json="$RUNNER_TEMP/sbom.json" -q
+          "$BIN/grype" "sbom:$RUNNER_TEMP/sbom.json" -o table || true

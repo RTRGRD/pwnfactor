@@ -1,0 +1,27 @@
+# Onboarding template -> copy to a project's .github/workflows/claude.yml
+# On-demand AI review: comment "@claude ..." on a PR or issue. Requires secret ANTHROPIC_API_KEY.
+#
+# SECURITY: this job is gated to trusted actors (OWNER/MEMBER/COLLABORATOR). Without that gate,
+# any commenter on a public/forkable repo could trigger a write-scoped, key-bearing run via
+# prompt injection. Keep the gate; trim permissions to the minimum your usage needs.
+name: claude
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+jobs:
+  claude:
+    if: >-
+      contains(github.event.comment.body, '@claude') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    permissions:                 # least privilege — drop any your usage doesn't need
+      contents: write            # only if the action pushes fixes; otherwise 'read'
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}

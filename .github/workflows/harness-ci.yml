@@ -1,0 +1,90 @@
+# Central REUSABLE CI for any repo. Maintained once here; called by each repo.
+# Pass the repo's REAL commands (from its orchestration profile) via `with:`; falls back to auto-detect.
+#   jobs:
+#     checks:
+#       uses: <your-org>/<your-repo>/.github/workflows/harness-ci.yml@v0.1.0
+#       with:
+#         setup-cmd: "pip install -e apps/server[dev] && pnpm install --frozen-lockfile"
+#         lint-cmd: "ruff check apps/server"
+#         typecheck-cmd: "pnpm -C apps/desktop exec tsc --noEmit"
+#         test-cmd: "pytest apps/server -q && pnpm -C apps/desktop exec vitest run"
+name: harness-ci
+on:
+  workflow_call:
+    inputs:
+      node-version: { type: string, default: "20" }
+      python-version: { type: string, default: "3.11" }
+      setup-cmd: { type: string, default: "" }       # install/build before checks (the repo's command)
+      lint-cmd: { type: string, default: "" }
+      typecheck-cmd: { type: string, default: "" }
+      test-cmd: { type: string, default: "" }
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect stacks
+        id: detect
+        shell: bash
+        run: |
+          echo "node=$([ -f package.json ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "py=$([ -f pyproject.toml ] || [ -f setup.py ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "rust=$([ -f Cargo.toml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      # ---- language toolchains (set up whatever's present; serves both paths) ----
+      - uses: pnpm/action-setup@v4
+        if: steps.detect.outputs.node == 'true'
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.node == 'true'
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        if: steps.detect.outputs.py == 'true'
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      # ---- TAILORED path: run the repo's real commands. Injection-safe: commands come in
+      #      via env, never interpolated into the run script. set -e so a real failure fails CI.
+      - name: Tailored checks
+        if: inputs.setup-cmd != '' || inputs.lint-cmd != '' || inputs.typecheck-cmd != '' || inputs.test-cmd != ''
+        shell: bash
+        env:
+          SETUP_CMD: ${{ inputs.setup-cmd }}
+          LINT_CMD: ${{ inputs.lint-cmd }}
+          TYPECHECK_CMD: ${{ inputs.typecheck-cmd }}
+          TEST_CMD: ${{ inputs.test-cmd }}
+        run: |
+          set -e
+          if [ -n "$SETUP_CMD" ];     then echo "::group::setup";     bash -lc "$SETUP_CMD";     echo "::endgroup::"; fi
+          if [ -n "$LINT_CMD" ];      then echo "::group::lint";      bash -lc "$LINT_CMD";      echo "::endgroup::"; fi
+          if [ -n "$TYPECHECK_CMD" ]; then echo "::group::typecheck"; bash -lc "$TYPECHECK_CMD"; echo "::endgroup::"; fi
+          if [ -n "$TEST_CMD" ];      then echo "::group::test";      bash -lc "$TEST_CMD";      echo "::endgroup::"; fi
+
+      # ---- AUTO-DETECT fallback: only when NO commands were passed ----
+      - name: Node checks (auto)
+        if: steps.detect.outputs.node == 'true' && inputs.setup-cmd == '' && inputs.lint-cmd == '' && inputs.typecheck-cmd == '' && inputs.test-cmd == ''
+        shell: bash
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm -r run lint --if-present
+          pnpm -r run typecheck --if-present
+          pnpm -r run test --if-present
+      - name: Python checks (auto)
+        if: steps.detect.outputs.py == 'true' && inputs.setup-cmd == '' && inputs.lint-cmd == '' && inputs.typecheck-cmd == '' && inputs.test-cmd == ''
+        shell: bash
+        run: |
+          python -m pip install -U pip
+          pip install -e ".[dev]" || pip install -e . || pip install -r requirements.txt || true
+          pip install ruff pytest >/dev/null 2>&1 || true
+          ruff check . || true        # lint advisory until the project adopts a ruff config
+          pytest -q                    # test failures DO fail CI
+      - name: Rust checks (auto)
+        if: steps.detect.outputs.rust == 'true' && inputs.setup-cmd == '' && inputs.lint-cmd == '' && inputs.typecheck-cmd == '' && inputs.test-cmd == ''
+        shell: bash
+        run: |
+          cargo fmt --check || true
+          cargo clippy -- -D warnings || true
+          cargo test

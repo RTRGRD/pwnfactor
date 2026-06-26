@@ -1,0 +1,17 @@
+{
+  "name": "pwnfactor",
+  "description": "Agentic engineering harness: a feature lifecycle spine (Frame -> Plan -> Build -> Verify -> Integrate), a risk-routed multi-agent review panel (code-review + simplifier + security Claude subagents plus optional Codex cross-model review), and a deliberate subagent-orchestration playbook for the build loop. Token-efficient docs, safety-rail aware, solo-mode friendly. Use its skills as /pwnfactor:run, /pwnfactor:gg, /pwnfactor:swarm.",
+  "version": "0.1.1",
+  "author": {
+    "name": "sleppelm"
+  },
+  "keywords": [
+    "code-review",
+    "orchestration",
+    "verification",
+    "quality",
+    "agents",
+    "harness"
+  ],
+  "category": "quality"
+}

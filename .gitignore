@@ -1,0 +1,15 @@
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+.env
+.env.*
+
+# pwnfactor sweep output + local sandbox keys
+.security-audit/
+.security-audit.env
+
+# pwnfactor gate artifacts (stop-hook)
+.pwnfactor/
