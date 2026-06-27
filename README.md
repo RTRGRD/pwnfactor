@@ -24,7 +24,7 @@ Around that core sit four supporting skills:
 ## Install (in any project)
 
 ```
-/plugin marketplace add sleppelm/pwnfactor
+/plugin marketplace add RTRGRD/pwnfactor
 /plugin install pwnfactor@pwnfactor
 ```
 
