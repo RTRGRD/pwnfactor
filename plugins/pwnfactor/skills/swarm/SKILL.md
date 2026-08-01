@@ -82,6 +82,21 @@ Produce a **one-screen unit graph** (no graph ⇒ not ready to fan out). Per can
 - **Opus** - novel/ambiguous/security-sensitive reasoning (tool-use loops, authz logic, the state machine, contract design).
 - **Sonnet-high** - well-specified breadth (boilerplate, exhaustive tests, repetitive wrappers) **ONLY if the unit touches none of: auth/RBAC, vault/credentials/secret-stripping, command/SQL construction, untrusted-data egress, migrations, or a destructive/mutating path.** Anything touching those is **Opus regardless of how mechanical it looks.** Unsure ⇒ in scope ⇒ Opus.
 
+**Effort is a per-agent knob now - set it explicitly, like `model:`.** The harness exposes
+reasoning effort per spawned agent; the dial is no longer prose the lead holds in its head:
+- **Agent-tool subagents** - the agent definition's frontmatter carries `model` and reasoning
+  effort; pick (or define) the definition matching the unit's tier, and still pass `model:` per
+  call (`run/model-economics.md`).
+- **Workflow scripts** - `agent(prompt, {model, effort})` takes effort per call:
+  `low | medium | high | xhigh | max`.
+- **Scale mapping** - the doctrine tiers map onto the 5-step scale as medium -> `medium`,
+  high -> `high`, max -> `xhigh`; reserve `max` for the single hardest verify/judge or
+  irreversible-design unit, and use `low` for mechanical fixer sub-roles.
+
+Never let a spawned agent silently inherit the lead's effort. The lead runs hot; a leaf unit
+inheriting that tier burns budget without buying rigor - the same silent-inheritance trap as
+`model:`, in the other direction.
+
 **Operator's "extra/high/max mode"** is the EFFORT dial: deep thinking + generous per-agent token budget. It does NOT license fan-out. Max-effort can be SOLO (a security-sensitive refactor); a wide feature can run with medium leaves if its units are independent and low-risk.
 
 **Combining:** DEFAULT = solo lead, high effort, Opus; escalate only when a rule fires. The LEAD runs at the feature's tier or higher (it synthesizes + re-plans), may **PROPOSE** a downgrade to the operator (surfacing cost) but **never apply one silently**.

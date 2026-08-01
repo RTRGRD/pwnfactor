@@ -26,5 +26,6 @@ Otherwise it is **ROUTINE**: UI, internal refactors, docs, additive pure functio
 | Orchestration | usually solo | decompose only if parallel-safe; isolate in worktrees |
 
 ## Notes
+- "Reasoning effort" names the harness's per-agent 5-step scale (`low`/`medium`/`high`/`xhigh`/`max`): ROUTINE runs medium-high; HIGH runs high-xhigh, with `max` reserved for the single most critical unit. Set it explicitly per spawned agent - never inherited silently (`model-economics.md`).
 - Tier is about **blast radius and reversibility**, not size. A 3-line change to an authz check is HIGH; a 300-line UI refactor is ROUTINE.
 - A change can be mostly ROUTINE with one HIGH file - tier the **riskiest** surface and review that part at HIGH.

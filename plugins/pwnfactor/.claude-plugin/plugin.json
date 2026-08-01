@@ -1,7 +1,7 @@
 {
   "name": "pwnfactor",
   "description": "Agentic engineering harness: a feature lifecycle spine (Frame -> Plan -> Build -> Verify -> Integrate), a risk-routed multi-agent review panel (code-review + simplifier + security Claude subagents plus optional Codex cross-model review), a deliberate subagent-orchestration playbook for the build loop, a ground-truth validation gate, and a read-only pre-prod security sweep. Token-efficient docs, safety-rail aware, solo-mode friendly. Use its skills as /pwnfactor:run, /pwnfactor:gg, /pwnfactor:validate, /pwnfactor:swarm, /pwnfactor:sweep.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "author": {
     "name": "Scott Leppelman"
