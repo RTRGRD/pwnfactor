@@ -1,6 +1,6 @@
 ---
 name: gg
-description: Risk-routed multi-agent code review for a finished change. Fans out independent code-review, simplifier, and security subagents in parallel, optionally adds a Codex cross-model review, cross-verifies and dedupes findings, and returns a ship / fix-then-ship / block verdict with a written report. Use after completing a feature, before merging, or when the user asks for a "review panel", "panel review", or "pre-merge review".
+description: Risk- and footprint-routed multi-agent code review for a finished change. Scales review depth to the diff (docs-only skips, small routine diffs get one reviewer, real features get the 3-reviewer panel, risky surfaces get an Opus panel plus adversarial Codex), cross-verifies and dedupes findings, and returns a ship / fix-then-ship / block verdict with a written report. Use after completing a feature, before merging, or when the user asks for a "review panel", "panel review", or "pre-merge review".
 ---
 
 # Review Panel
@@ -18,9 +18,9 @@ Copy this checklist and work it top to bottom:
 ```
 Review Panel:
 - [ ] 1. Scope the diff (base ref + changed files)
-- [ ] 2. Classify risk -> pick tier (ROUTINE / HIGH)
-- [ ] 3. Fan out the 3 reviewers in parallel on the tier's model
-- [ ] 4. Codex cross-model review (if available)
+- [ ] 2. Classify risk + footprint -> pick DEPTH (SKIP / SOLO / PANEL / ADVERSARIAL)
+- [ ] 3. Run the depth's reviewers (parallel, on the tier's model)
+- [ ] 4. Codex cross-model review (per depth, if available)
 - [ ] 5. Cross-verify + dedupe findings
 - [ ] 6. Verdict + written report
 ```
@@ -40,10 +40,28 @@ Apply this compact rubric (canonical, fuller version: `run/risk-tiers.md`):
 | Untrusted input parsing, deserialization, shell-out, dynamic SQL, file/path handling | HIGH |
 | Everything else (UI, internal refactors, docs, additive pure functions) | ROUTINE |
 
-**ROUTINE → Sonnet panel + regular Codex. HIGH → Opus panel + adversarial Codex. When in doubt, treat as HIGH.**
+**ROUTINE → Sonnet reviewers + regular Codex. HIGH → Opus reviewers + adversarial Codex. When in doubt, treat as HIGH.**
 
-### 3. Fan out the panel (parallel, isolated context)
-Spawn all three subagents **in parallel** via the Agent tool, each with `model` set EXPLICITLY to
+**Then scale the DEPTH to the footprint.** Risk sets the model tier; footprint sets how many
+reviewers run. Review effort is proportional to what could break - the full panel on every small
+diff is theater that burns tokens and rate limits:
+
+| Depth | When | What runs |
+|---|---|---|
+| **SKIP** | docs / comments / config-typo only; no executable code changed | no reviewers. Note "depth: skip (docs-only)" in chat; still write the gate artifact (verdict `ship`) |
+| **SOLO** | ROUTINE, small (roughly <=50 changed lines), one surface, zero HIGH signals | ONE `panel-code-review` subagent on the tier's model; no simplifier/security; Codex skipped |
+| **PANEL** | any real feature: multi-file, new surface, or nontrivial logic (ROUTINE) | all 3 reviewers + regular Codex - the default for finished features |
+| **ADVERSARIAL** | ANY HIGH signal, regardless of size (a 3-line authz change is ADVERSARIAL) | all 3 reviewers on Opus + adversarial Codex; every CRITICAL/HIGH finding verified against the code |
+
+Rules: a HIGH signal always forces ADVERSARIAL - size never argues down past a risk signal. When
+unsure between two depths, round UP one. The operator explicitly asking for a review/audit is a
+floor of PANEL (they asked for eyes; give them eyes). SOLO/SKIP exist so that PANEL and
+ADVERSARIAL stay affordable where they matter.
+
+### 3. Run the depth's reviewers (parallel, isolated context)
+At SKIP there is nothing to spawn - write the gate and stop. At SOLO spawn only
+`panel-code-review`. At PANEL/ADVERSARIAL spawn all three:
+Spawn the depth's subagents **in parallel** via the Agent tool, each with `model` set EXPLICITLY to
 the tier's model (ROUTINE = `sonnet`, HIGH = `opus`) - never omit `model:` (it silently inherits
 the main-loop model; on a frontier main loop that burns the metered budget - `run/model-economics.md`).
 The frontier main loop ADJUDICATES the panel's findings; it does not sit on the panel, EXCEPT when
@@ -57,7 +75,8 @@ the whole repo; they explore from there.
 
 Each returns a **distilled** findings list (severity, `file:line`, one-line fix), not a transcript.
 
-### 4. Codex cross-model review - if available
+### 4. Codex cross-model review - per depth, if available
+Codex runs at PANEL (regular) and ADVERSARIAL (adversarial); it is skipped at SKIP/SOLO.
 Codex (OpenAI, GPT-5.x) is a different model family, so it catches a different class of mistakes. **Prefer the official OpenAI Codex plugin** (`openai/codex-plugin-cc`, commands `/codex:*`) when installed; fall back to the `codex` CLI skill; otherwise skip.
 - **Plugin installed** → ROUTINE: `/codex:review` (auto-detects the diff; `--base <merge-base>` for a branch). HIGH: `/codex:adversarial-review` with a focus line (e.g. "focus on the auth/vault/migration surface; try to refute this change"). Fetch the result with `/codex:result`.
 - **CLI skill only** → `/codex code-review`, run headless ("no window").
@@ -78,12 +97,12 @@ Verdict:
 - **fix-then-ship** - HIGH/MEDIUM worth fixing but not merge-blockers once addressed.
 - **ship** - only NITs, or clean.
 
-Write the report to the project's reports directory (default `reports/`, create it if absent) as `review-<short-desc>-<base-sha>.md`, including: scope, tier, per-reviewer findings, the deduped verdict, and the exact diff range reviewed. Then report the verdict + top findings in chat and offer to apply fixes.
+Write the report to the project's reports directory (default `reports/`, create it if absent) as `review-<short-desc>-<base-sha>.md`, including: scope, tier, DEPTH chosen and why, per-reviewer findings, the deduped verdict, and the exact diff range reviewed. Then report the verdict + top findings in chat and offer to apply fixes. (SKIP-depth reviews write no report file - the chat note and gate artifact are the record.)
 
 **Gate artifact (for the ultracode stop-hook).** Also write `.pwnfactor/gate.json`: `{"head": "<current HEAD sha>", "verdict": "ship|fix-then-ship|block", "ts": "<iso8601 UTC>"}`. The stop-hook treats a **ship** or **fix-then-ship** verdict whose `head` matches the current commit as a passing gate; **block**, or a stale/missing artifact, means the gate hasn't passed.
 
 ## Notes
 - **Read-only by default.** The panel reviews; it does not edit. Apply fixes only when the operator says go.
 - **Parallel build context:** if this runs inside a multi-agent build, leave commits to the integration phase - parallel agents must not commit (index-lock races).
-- **Cost:** the tier controls spend. Don't run an Opus panel + adversarial Codex on a docs-only diff.
+- **Cost:** the tier controls the model; the DEPTH controls how many reviewers run. A docs-only diff is SKIP, a small routine diff is SOLO - the full panel is for real features, the adversarial panel for risk. Depth never argues down past a HIGH signal.
 - **Codex setup & limits:** see `codex-integration.md`. Leave the Codex plugin's Stop-hook review-gate **OFF** (`/codex:setup`) - it loops and drains usage limits; the panel calls Codex explicitly, once per feature, after mechanical checks pass.
