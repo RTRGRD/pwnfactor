@@ -47,6 +47,9 @@ Trivial change (typo, one-liner, obvious fix)? Skip this and just do it. This is
 
 ## See also
 - `risk-tiers.md` - the risk rubric used here and by the panel.
+- `model-economics.md` - **where to spend the frontier main-loop model vs tier subagents down**
+  (operator directive 2026-07-02: best results for the least money; never silent model inheritance;
+  operator-requested audits stay in the main loop, routine reviews tier down).
 - `documentation-standards.md` - writing docs/comments without burning tokens.
 - `swarm` - the build-loop playbook (deliberate subagent fan-out).
 - `gg` - the verify gate.

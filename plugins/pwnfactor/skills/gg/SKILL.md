@@ -43,7 +43,13 @@ Apply this compact rubric (canonical, fuller version: `run/risk-tiers.md`):
 **ROUTINE → Sonnet panel + regular Codex. HIGH → Opus panel + adversarial Codex. When in doubt, treat as HIGH.**
 
 ### 3. Fan out the panel (parallel, isolated context)
-Spawn all three subagents **in parallel** via the Agent tool, each with `model` set to the tier's model (ROUTINE = `sonnet`, HIGH = `opus`). Give each only the **diff scope** (base ref + changed files + your 2-3 line summary) - not the whole repo; they explore from there.
+Spawn all three subagents **in parallel** via the Agent tool, each with `model` set EXPLICITLY to
+the tier's model (ROUTINE = `sonnet`, HIGH = `opus`) — never omit `model:` (it silently inherits
+the main-loop model; on a frontier main loop that burns the metered budget — `run/model-economics.md`).
+The frontier main loop ADJUDICATES the panel's findings; it does not sit on the panel, EXCEPT when
+the operator explicitly asked for an audit/deep review — that judgment work stays in the main loop.
+Give each reviewer only the **diff scope** (base ref + changed files + your 2-3 line summary) - not
+the whole repo; they explore from there.
 
 - `panel-code-review` - correctness, bugs, races, boundaries, contract drift, anti-regression rules.
 - `panel-simplifier` - reuse, dead code, premature abstraction, altitude. Quality only; it does not hunt bugs.
