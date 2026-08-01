@@ -49,7 +49,7 @@ diff is theater that burns tokens and rate limits:
 | Depth | When | What runs |
 |---|---|---|
 | **SKIP** | docs / comments / config-typo only; no executable code changed | no reviewers. Note "depth: skip (docs-only)" in chat; still write the gate artifact (verdict `ship`) |
-| **SOLO** | ROUTINE, small (roughly <=50 changed lines), one surface, zero HIGH signals | ONE `panel-code-review` subagent on the tier's model; no simplifier/security; Codex skipped |
+| **SOLO** | ROUTINE, small (roughly <=50 changed lines), one surface, zero HIGH signals | ONE reviewer, and prefer **Codex** (regular review) - it costs zero Claude tokens (`run/model-economics.md`). Only if Codex is unavailable (health-check verified, never assumed) fall back to one `panel-code-review` subagent on the tier's model. No simplifier/security either way |
 | **PANEL** | any real feature: multi-file, new surface, or nontrivial logic (ROUTINE) | all 3 reviewers + regular Codex - the default for finished features |
 | **ADVERSARIAL** | ANY HIGH signal, regardless of size (a 3-line authz change is ADVERSARIAL) | all 3 reviewers on Opus + adversarial Codex; every CRITICAL/HIGH finding verified against the code |
 
@@ -59,8 +59,9 @@ floor of PANEL (they asked for eyes; give them eyes). SOLO/SKIP exist so that PA
 ADVERSARIAL stay affordable where they matter.
 
 ### 3. Run the depth's reviewers (parallel, isolated context)
-At SKIP there is nothing to spawn - write the gate and stop. At SOLO spawn only
-`panel-code-review`. At PANEL/ADVERSARIAL spawn all three:
+At SKIP there is nothing to spawn - write the gate and stop. At SOLO the single reviewer is
+Codex (step 4) - spawn `panel-code-review` only as the verified-unavailable fallback. At
+PANEL/ADVERSARIAL spawn all three:
 Spawn the depth's subagents **in parallel** via the Agent tool, each with `model` set EXPLICITLY to
 the tier's model (ROUTINE = `sonnet`, HIGH = `opus`) - never omit `model:` (it silently inherits
 the main-loop model; on a frontier main loop that burns the metered budget - `run/model-economics.md`).
@@ -76,7 +77,9 @@ the whole repo; they explore from there.
 Each returns a **distilled** findings list (severity, `file:line`, one-line fix), not a transcript.
 
 ### 4. Codex cross-model review - per depth, if available
-Codex runs at PANEL (regular) and ADVERSARIAL (adversarial); it is skipped at SKIP/SOLO.
+Codex runs at SOLO (regular - as the sole reviewer, saving Claude tokens), PANEL (regular), and
+ADVERSARIAL (adversarial); it is skipped only at SKIP. At SOLO, Codex findings still get step
+5's scrutiny - a sole reviewer is still a lead, not a fact.
 Codex (OpenAI, GPT-5.x) is a different model family, so it catches a different class of mistakes. **Prefer the official OpenAI Codex plugin** (`openai/codex-plugin-cc`, commands `/codex:*`) when installed; fall back to the `codex` CLI skill; otherwise skip.
 - **Plugin installed** → ROUTINE: `/codex:review` (auto-detects the diff; `--base <merge-base>` for a branch). HIGH: `/codex:adversarial-review` with a focus line (e.g. "focus on the auth/vault/migration surface; try to refute this change"). Fetch the result with `/codex:result`.
 - **CLI skill only** → `/codex code-review`, run headless ("no window").
@@ -104,5 +107,5 @@ Write the report to the project's reports directory (default `reports/`, create 
 ## Notes
 - **Read-only by default.** The panel reviews; it does not edit. Apply fixes only when the operator says go.
 - **Parallel build context:** if this runs inside a multi-agent build, leave commits to the integration phase - parallel agents must not commit (index-lock races).
-- **Cost:** the tier controls the model; the DEPTH controls how many reviewers run. A docs-only diff is SKIP, a small routine diff is SOLO - the full panel is for real features, the adversarial panel for risk. Depth never argues down past a HIGH signal.
+- **Cost:** the tier controls the model; the DEPTH controls how many reviewers run. A docs-only diff is SKIP, a small routine diff is SOLO (Codex-first - zero Claude tokens) - the full panel is for real features, the adversarial panel for risk. Depth never argues down past a HIGH signal.
 - **Codex setup & limits:** see `codex-integration.md`. Leave the Codex plugin's Stop-hook review-gate **OFF** (`/codex:setup`) - it loops and drains usage limits; the panel calls Codex explicitly, once per feature, after mechanical checks pass.
