@@ -11,6 +11,35 @@ frontier tokens on mechanical work, and letting a cheap model review a money/aut
 model when `model:` is omitted - on a frontier main loop that quietly spends the exact budget being
 protected. Every Agent call sets `model:` explicitly. No exceptions.
 
+## The second mechanical rule
+
+**A live subagent is a warm cache. Continue it; do not respawn.** Before every Agent call, check
+whether an agent spawned earlier this session already holds the context this task needs. If one
+does, use `SendMessage` with its id instead - it resumes with its context intact, where a fresh
+Agent call re-reads every file from zero.
+
+The waste is invisible because both paths return a good answer. Only the token bill differs, and it
+differs by the whole cost of re-reading the repo.
+
+Continue the existing agent when:
+
+- **A review has a round two.** The round-one reviewers already read the design docs, the spec and
+  the diff. They also know what they recommended, so they can judge whether the fix actually
+  addressed the finding - a fresh agent cannot, and will re-litigate settled points.
+- **A finding needs verification or a repro.** Ask the agent that raised it. It has the trace.
+- **A follow-up question falls inside what it already read.** "Dig deeper on X" beats a new agent
+  with a longer prompt.
+- **An answer came back incomplete or hedged.** Push back on the same agent. An incomplete result
+  is a reason to iterate, never a reason to start over.
+
+Spawn fresh only when the task is genuinely a different question over a different surface, or when
+you deliberately want an independent perspective uncontaminated by the first (a second opinion is a
+real reason - "I forgot the first one existed" is not).
+
+**Keep the ids.** When an Agent call returns, its id comes back with it. Record the ids alongside
+what each agent covered, so future-you can route a follow-up instead of re-deriving. An agent whose
+id you have dropped is work you have already paid for and thrown away.
+
 ## Where the frontier model earns its cost (keep IN the main loop)
 
 - **Orchestration** - framing, decomposition, sequencing, what-to-delegate-to-whom. This is the

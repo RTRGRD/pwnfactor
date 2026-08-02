@@ -87,6 +87,14 @@ Codex (OpenAI, GPT-5.x) is a different model family, so it catches a different c
 
 Read only Codex's final result - don't tail it. Never block the panel on Codex.
 
+### 4b. Re-review after fixes - CONTINUE, never respawn
+When findings are applied and the diff needs another look, or when a change lands on a surface an
+earlier reviewer already covered, **`SendMessage` the reviewers that ran before** instead of
+spawning new ones. They hold the diff, the constraints and their own findings - so they can say
+whether a fix actually addressed the thing they raised, which a fresh agent structurally cannot.
+Respawn only for a genuinely different surface, or when an independent second opinion is the point.
+See `run/model-economics.md`, "the second mechanical rule".
+
 ### 5. Cross-verify + dedupe (don't trust raw output)
 - Merge all findings; dedupe by `(file, line, issue)`.
 - For every **CRITICAL/HIGH** finding, open the actual code and confirm it before reporting. Drop anything you can't substantiate; demote speculative items to a "worth a look" list. Subagent output is a **lead, not a fact**.

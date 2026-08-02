@@ -47,6 +47,22 @@ Trivial change (typo, one-liner, obvious fix)? Skip this and just do it. This is
 - Commit (single agent / integration phase only). Describe the change, not the tooling.
 - Report what you ran and what it produced. If verification was impossible (missing toolchain, Docker down), say so plainly - don't imply success.
 
+## Long-horizon work: checkpoint each phase
+
+A run spanning hours or many units does NOT execute end to end and report at the finish. Break it
+into phases and close each one before opening the next:
+
+1. **State the phase's done-criteria before starting it** - what evidence will show it worked.
+2. **Validate against that evidence, not against "the code looks finished."** A phase that cannot
+   show its evidence is not done; say so and stop rather than rolling forward.
+3. **Compress and hand the checkpoint forward** - what landed, what it cost, what is carried, and
+   any agent ids still live. A few lines, not a transcript. This is what survives compaction.
+4. **Never begin a phase whose predecessor is unvalidated.** A failure discovered three phases later
+   costs all three.
+
+The checkpoint is also where reuse happens: it is the record of which subagents already hold which
+context, so the next phase continues them instead of paying for a cold start.
+
 ## See also
 - `risk-tiers.md` - the risk rubric used here and by the panel.
 - `model-economics.md` - **where to spend the frontier main-loop model vs tier subagents down**
