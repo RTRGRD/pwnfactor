@@ -18,6 +18,12 @@ whether an agent spawned earlier this session already holds the context this tas
 does, use `SendMessage` with its id instead - it resumes with its context intact, where a fresh
 Agent call re-reads every file from zero.
 
+This is native harness behavior now, not a workaround: subagents run in the background by default
+and PERSIST after finishing. `SendMessage` to a completed agent auto-resumes it with its full
+conversation history, and agents treat those messages as normal mid-task direction - so course
+corrections, round-two reviews, and "dig deeper" follow-ups all route to the agent that already
+paid for the context.
+
 The waste is invisible because both paths return a good answer. Only the token bill differs, and it
 differs by the whole cost of re-reading the repo.
 
@@ -77,8 +83,11 @@ id you have dropped is work you have already paid for and thrown away.
 
 Model and reasoning effort are separate spends that MULTIPLY (swarm's two-dials law). The same
 silent-inheritance rule applies: every spawned agent takes an explicit effort tier on the
-harness's 5-step scale (`low | medium | high | xhigh | max`) - via agent-definition frontmatter
-or the Workflow `agent(..., {effort})` option. Pair the dials deliberately: `haiku`/`sonnet` x
+harness's 5-step scale (`low | medium | high | xhigh | max`) - via the agent definition's
+`effort:` frontmatter field or the Workflow `agent(..., {effort})` option. There is no per-agent
+extended-thinking toggle (thinking inherits from the session globally), so `effort:` is the only
+per-agent depth dial; the Agent tool also has no per-call effort parameter, which is why the
+frontmatter carries it. Pair the dials deliberately: `haiku`/`sonnet` x
 `low`-`medium` for mechanical bulk; `opus` x `high` for typical HIGH-surface implementation;
 `opus` x `xhigh`/`max` only for the hardest adjudication/verify/novel-design units. A cheap
 model at max effort is usually a worse buy than the next model up at medium.

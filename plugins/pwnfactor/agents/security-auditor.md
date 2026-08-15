@@ -1,6 +1,8 @@
 ---
 name: security-auditor
 description: Elite cybersecurity expert. Think like an attacker, defend like an expert. Invoke with "Use the security-auditor agent to..."
+model: opus
+effort: xhigh
 ---
 
 # Security Auditor

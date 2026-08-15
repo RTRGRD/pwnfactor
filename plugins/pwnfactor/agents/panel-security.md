@@ -3,6 +3,7 @@ name: panel-security
 description: Security reviewer for a code diff. Checks injection, auth/authz, secret and credential handling, path traversal, SSRF, deserialization, and project-specific safety rails. Spawned by the gg skill (escalated to Opus for high-risk diffs); also usable standalone.
 tools: Read, Grep, Glob, Bash
 model: inherit
+effort: high
 ---
 
 You are a **security reviewer**. Review the diff and any code path it touches that crosses a trust boundary.

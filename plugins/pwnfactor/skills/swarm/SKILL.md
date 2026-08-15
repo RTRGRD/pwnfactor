@@ -84,9 +84,11 @@ Produce a **one-screen unit graph** (no graph ⇒ not ready to fan out). Per can
 
 **Effort is a per-agent knob now - set it explicitly, like `model:`.** The harness exposes
 reasoning effort per spawned agent; the dial is no longer prose the lead holds in its head:
-- **Agent-tool subagents** - the agent definition's frontmatter carries `model` and reasoning
-  effort; pick (or define) the definition matching the unit's tier, and still pass `model:` per
-  call (`run/model-economics.md`).
+- **Agent-tool subagents** - the agent definition's frontmatter carries `model:` and `effort:`
+  (the documented CC field). There is NO per-agent extended-thinking toggle - thinking inherits
+  from the session globally - so **`effort:` IS the per-agent depth dial**. The Agent tool has no
+  per-call effort parameter either: pick (or define) the agent definition matching the unit's
+  tier, and still pass `model:` per call (`run/model-economics.md`).
 - **Workflow scripts** - `agent(prompt, {model, effort})` takes effort per call:
   `low | medium | high | xhigh | max`.
 - **Scale mapping** - the doctrine tiers map onto the 5-step scale as medium -> `medium`,
@@ -110,6 +112,14 @@ inheriting that tier burns budget without buying rigor - the same silent-inherit
 5. **Refresh non-hot-reloading services at server/migration checkpoints.** If your stack builds an artifact that does NOT hot-reload (e.g. a container image), rebuild+recreate it after the relevant merge - your profile's **Build/refresh** step. A stale artifact fakes green.
 6. **Safety rails are unit-integrity constraints - and confirm your project's rollback MODEL (often checkpoint-FIRST, not auto-undo).** Many systems don't auto-roll-back a failed apply: rollback is a *separate, operator-initiated, checkpoint-driven* action, and a failed unit may not even be rollback-eligible (your profile's **Mutation & rollback model**). So a mutating unit is **green only when an automated test proves: (a) dry-run yields a plan with no side effects; (b) apply records a checkpoint; (c) the rollback path restores prior state from that checkpoint, confirmed by readback; (d) audit/records are metadata-only.** Run against real test targets or faithful transport mocks (mocks must decode/route exactly like the real transport). **Asserting rollback merely exists, or assuming a mid-apply failure auto-rolls-back, is RED.** Effort never buys past a HITL gate before an irreversible action.
 7. **Secrets never enter the loop's artifacts.** Keys/passwords/tokens/provider-creds never appear in a brief, a distilled return, the plan file, a fixture, a log, or a payload - only credential *names*. A unit that would serialize a secret is mis-designed; stop it.
+8. **Builders are CONVERSATIONS, not one-shots - and the topology stays flat.** Subagents run in
+   the background by default and persist after finishing: `SendMessage` course-corrects a builder
+   mid-task, and a *completed* agent auto-resumes with its full history (warm cache - a round two,
+   a re-verify, or a follow-up goes to the SAME agent, never a respawn; `run/model-economics.md`).
+   Keep the ids as agents return. And pin flatness mechanically: recent CC re-enabled nested
+   subagent spawning (depth 3 by default) - set `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` in the
+   project's env so "one lead, one flat layer of workers" is enforced by the harness, not by
+   prose in a dispatch prompt.
 
 ## 6. The build → verify loop
 
@@ -122,7 +132,7 @@ Hand the panel an **already green coherent diff**. The panel is the GATE, not th
 **Re-plan from synthesis, don't stream-merge decisions.** When N agents return, read all N and reconcile *conflicts* (incompatible contracts) before committing those; but **independent, non-conflicting units merge as they land** (§3). Prefer a framework/DB-enforced invariant a subagent surfaced (a deny-by-default check; an FK `ON DELETE` cascade) over a brittle hardcoded list.
 
 **Two bounded loops:**
-- **LOOP-UNTIL-GREEN:** build → run the unit's tests/typecheck/lint → on red, feed the **verbatim test failure** to a fixer (one tier lower) → re-run. **K = auto-fix attempts before escalating: default 3; 2 for shape-obvious units.** Repeated auto-fix on the same red is a spec/contract gap - STOP and escalate the failure + your hypothesis.
+- **LOOP-UNTIL-GREEN:** build → run the unit's tests/typecheck/lint → on red, feed the **verbatim test failure** BACK to the builder via `SendMessage` - it holds the unit's context, so a warm resume beats a fresh fixer re-reading everything (§5.8). Spawn a separate lower-tier fixer only when the builder is gone or the fix is purely mechanical. **K = auto-fix attempts before escalating: default 3; 2 for shape-obvious units.** Repeated auto-fix on the same red is a spec/contract gap - STOP and escalate the failure + your hypothesis.
 - **SKEPTIC PASS (opt-in, not reflexive):** for a risk-bearing unit, the lead runs ITS OWN fresh-context skeptic at the unit boundary. Trigger it **after a red finding, or on the single highest-risk unit** - NOT as a default loop on every boundary (that's theater and burns rate limits). One clean pass for reversible work; up to 2-3 for irreversible/mutating/secret/authz.
 
 **The verify gate (`gg`) - runs ONCE, on the assembled whole diff, after green:**

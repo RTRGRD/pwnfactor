@@ -65,6 +65,11 @@ PANEL/ADVERSARIAL spawn all three:
 Spawn the depth's subagents **in parallel** via the Agent tool, each with `model` set EXPLICITLY to
 the tier's model (ROUTINE = `sonnet`, HIGH = `opus`) - never omit `model:` (it silently inherits
 the main-loop model; on a frontier main loop that burns the metered budget - `run/model-economics.md`).
+**Reasoning effort rides in each agent's frontmatter, not the call** (code-review and security run
+`effort: high`, the simplifier `effort: medium`); extended thinking has no per-agent toggle, so the
+`effort:` field is the depth dial. The dials compose per depth: SOLO's fallback reviewer =
+tier-model x its frontmatter effort; PANEL = `sonnet` x frontmatter; ADVERSARIAL = `opus` x
+frontmatter - the model escalates with risk, the effort profile stays per-role.
 The frontier main loop ADJUDICATES the panel's findings; it does not sit on the panel, EXCEPT when
 the operator explicitly asked for an audit/deep review - that judgment work stays in the main loop.
 Give each reviewer only the **diff scope** (base ref + changed files + your 2-3 line summary) - not
@@ -90,7 +95,9 @@ Read only Codex's final result - don't tail it. Never block the panel on Codex.
 ### 4b. Re-review after fixes - CONTINUE, never respawn
 When findings are applied and the diff needs another look, or when a change lands on a surface an
 earlier reviewer already covered, **`SendMessage` the reviewers that ran before** instead of
-spawning new ones. They hold the diff, the constraints and their own findings - so they can say
+spawning new ones - a completed agent auto-resumes in the background with its full history, so
+this costs one message, not a re-read of the repo. They hold the diff, the constraints and their
+own findings - so they can say
 whether a fix actually addressed the thing they raised, which a fresh agent structurally cannot.
 Respawn only for a genuinely different surface, or when an independent second opinion is the point.
 See `run/model-economics.md`, "the second mechanical rule".
