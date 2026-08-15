@@ -45,6 +45,18 @@ Trivial change (typo, one-liner, obvious fix)? Skip this and just do it. This is
 ### 5. Integrate
 - **Before a production push or big build, OFFER `/pwnfactor:sweep`** (the pre-prod security audit) - the operator decides whether to run it.
 - Commit (single agent / integration phase only). Describe the change, not the tooling.
+- **Documentation wrap-up - non-optional when the change is major.** A change that alters
+  architecture, contracts, guarantees, or scope is NOT integrated until the project's governing
+  documents assert the new facts too: update the docs that state what changed, follow the
+  project's amendment ritual if it defines one, then GREP for dependents and read every hit -
+  the same fact usually lives in several places (a spec, an architecture reference, a harness
+  profile, a CI config, the reason string on a skipped test), and amending only the definition
+  leaves the rest asserting the old world with full authority. A doc update the operator has to
+  ask for is a doc update that was late.
+- **Antipattern harvest.** Before closing, ask: did anything here survive a plausible-looking
+  check, and would it recur? If the project keeps an antipattern log, write the entry NOW -
+  symptom, why it bites, what to do instead, where it was found. Closing a unit includes this
+  question; green tests alone do not close it.
 - Report what you ran and what it produced. If verification was impossible (missing toolchain, Docker down), say so plainly - don't imply success.
 
 ## Long-horizon work: checkpoint each phase
@@ -57,6 +69,8 @@ into phases and close each one before opening the next:
    show its evidence is not done; say so and stop rather than rolling forward.
 3. **Compress and hand the checkpoint forward** - what landed, what it cost, what is carried, and
    any agent ids still live. A few lines, not a transcript. This is what survives compaction.
+   A checkpoint that changed architecture or scope carries its documentation wrap-up WITH it -
+   batching doc updates to the end of a long run is how canon drifts mid-run.
 4. **Never begin a phase whose predecessor is unvalidated.** A failure discovered three phases later
    costs all three.
 
