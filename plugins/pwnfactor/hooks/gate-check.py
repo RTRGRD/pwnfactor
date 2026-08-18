@@ -15,8 +15,15 @@ import os
 import json
 import subprocess
 
-CODE_EXTS = (".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".go", ".java", ".rb",
-             ".php", ".c", ".h", ".cpp", ".cs", ".sql", ".sh", ".ps1")
+CODE_EXTS = (".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".rs", ".go", ".java", ".rb",
+             ".php", ".c", ".h", ".cpp", ".cc", ".hpp", ".cs", ".sql", ".sh", ".ps1", ".psm1",
+             ".kt", ".kts", ".swift", ".m", ".mm", ".scala", ".dart", ".ex", ".exs", ".erl",
+             ".fs", ".fsx", ".vb", ".vue", ".svelte", ".astro", ".sol", ".zig", ".hs", ".clj",
+             ".groovy", ".pl", ".pm", ".bash", ".zsh", ".ipynb", ".proto", ".prisma", ".tf",
+             ".tfvars", ".cmake", ".gd", ".lua", ".r", ".jl")
+# Executable files the extension test misses: build/container entrypoints by NAME, and CI
+# workflow YAML by PATH (config .yml elsewhere stays ungated - too noisy to gate globally).
+CODE_BASENAMES = ("dockerfile", "makefile", "cmakelists.txt", "justfile", "rakefile", "gemfile")
 
 
 def allow():
@@ -43,7 +50,9 @@ def main():
         allow()  # not a git repo
     repo = top.stdout.strip()
 
-    status = git("status", "--porcelain")
+    # -uall: porcelain collapses an UNTRACKED DIRECTORY to one "?? dir/" row, hiding every
+    # file inside it - brand-new code in a brand-new directory would never gate without it.
+    status = git("status", "--porcelain", "-uall")
     if status.returncode != 0:
         allow()
 
@@ -55,7 +64,10 @@ def main():
         if " -> " in path:                       # rename: keep the destination
             path = path.split(" -> ")[-1]
         path = path.strip().strip('"')
-        if path.lower().endswith(CODE_EXTS):
+        low = path.lower().replace("\\", "/")
+        base = low.rsplit("/", 1)[-1]
+        if (low.endswith(CODE_EXTS) or base in CODE_BASENAMES
+                or (".github/workflows/" in low and low.endswith((".yml", ".yaml")))):
             code_changes.append(path)
 
     if not code_changes:
@@ -69,7 +81,20 @@ def main():
             with open(gate_path, encoding="utf-8") as fh:
                 gate = json.load(fh)
             if gate.get("verdict") in ("ship", "fix-then-ship") and gate.get("head") == head_sha:
-                allow()  # fresh passing gate for this HEAD
+                # Content binding: head alone lets uncommitted edits ride a passing gate
+                # (HEAD does not move when the working tree changes). When the gate carries
+                # dirty_sha256, the CURRENT git diff HEAD must hash to the same value.
+                # A gate without the field is legacy: fail-open, as everywhere in this hook.
+                want = gate.get("dirty_sha256")
+                if not want:
+                    allow()  # legacy gate for this HEAD
+                import hashlib
+                diff = git("diff", "HEAD")
+                if diff.returncode != 0:
+                    allow()  # cannot compute -> fail open
+                have = hashlib.sha256(diff.stdout.encode("utf-8", "replace")).hexdigest()
+                if have == want:
+                    allow()  # fresh passing gate for this exact content
         except Exception:
             pass
 

@@ -82,7 +82,8 @@ verdict vocabulary (`ship | fix-then-ship | block`) so a clean `validate` actual
   "baseline_delta": "<capability % vs last, if measured>", "ts": "<iso8601 UTC>" }
 ```
 
-The Stop-hook treats a `ship`/`fix-then-ship` whose `head` == the current commit as a passing gate; `block`,
+The Stop-hook treats a `ship`/`fix-then-ship` whose `head` == the current commit (and, when present, whose
+`dirty_sha256` == sha256 of the current `git diff HEAD` - the content binding `gg` writes) as a passing gate; `block`,
 or a stale/missing artifact, means the gate hasn't passed. The hook reads only `head`+`verdict` - it CANNOT
 tell a `gg` artifact (diff-reviewed) from a `validate` one (oracle-validated); both write this same file. So
 the hook enforces *"a gate passed for this HEAD,"* and the DISCIPLINE of running `validate` (not just `gg`)

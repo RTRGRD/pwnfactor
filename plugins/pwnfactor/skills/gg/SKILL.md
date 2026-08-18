@@ -26,7 +26,12 @@ Review Panel:
 ```
 
 ### 1. Scope the diff
-- Default base: the merge-base with the main branch - `git merge-base HEAD <main>` then `git diff <base>...HEAD`. Fall back to `git diff HEAD~1` for a single-commit change. Ask only if the base is genuinely ambiguous.
+- Default base: the merge-base with the main branch - `git merge-base HEAD <main>` then **`git diff <base>`**
+  (two-dot against the merge-base, WITHOUT `...HEAD`). The two-dot form diffs the WORKING TREE, so staged
+  and unstaged work is included - and on `run`'s normal path Verify runs BEFORE the commit, so the feature
+  exists only as uncommitted work. `<base>...HEAD` compares committed history alone and would review an
+  empty or stale diff while the actual change sat unseen. Fall back to `git diff HEAD~1` only for a change
+  already committed as a single commit. Ask only if the base is genuinely ambiguous.
 - Summarize what changed (files, surfaces) in 2-3 lines. If the diff is empty, stop and say so.
 
 ### 2. Classify risk → pick tier
@@ -128,7 +133,14 @@ Verdict:
 
 Write the report to the project's reports directory (default `reports/`, create it if absent) as `review-<short-desc>-<base-sha>.md`, including: scope, tier, DEPTH chosen and why, per-reviewer findings, the deduped verdict, and the exact diff range reviewed. Then report the verdict + top findings in chat and offer to apply fixes. (SKIP-depth reviews write no report file - the chat note and gate artifact are the record.)
 
-**Gate artifact (for the ultracode stop-hook).** Also write `.pwnfactor/gate.json`: `{"head": "<current HEAD sha>", "verdict": "ship|fix-then-ship|block", "ts": "<iso8601 UTC>"}`. The stop-hook treats a **ship** or **fix-then-ship** verdict whose `head` matches the current commit as a passing gate; **block**, or a stale/missing artifact, means the gate hasn't passed.
+**Gate artifact (for the stop-hook).** Also write `.pwnfactor/gate.json`:
+`{"head": "<HEAD sha>", "dirty_sha256": "<sha256 of git diff HEAD>", "verdict": "ship|fix-then-ship|block", "ts": "<iso8601 UTC>"}`.
+`dirty_sha256` is the sha256 hex of the exact bytes `git diff HEAD` prints at review time (empty diff hashes the
+empty string) - compute it with the project's scripting, not by eye. It binds the gate to the CONTENT reviewed:
+`head` alone would let arbitrary uncommitted edits ride a passing gate, since HEAD does not move when the working
+tree changes. The stop-hook passes a **ship**/**fix-then-ship** verdict only when `head` matches the current commit
+AND (when `dirty_sha256` is present) the current `git diff HEAD` hashes to the same value - edit anything after the
+review and the gate goes stale, which is the point.
 
 ## Notes
 - **Read-only by default.** The panel reviews; it does not edit. Apply fixes only when the operator says go.

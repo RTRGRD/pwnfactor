@@ -40,7 +40,9 @@ Trivial change (typo, one-liner, obvious fix)? Skip this and just do it. This is
   (docs-only skips, a mechanical diff gets Codex alone, small real-logic gets Codex + 1, a feature
   gets the panel, any HIGH signal goes adversarial regardless of size). You do not pick the depth;
   gg reads the diff and picks it. Address CRITICAL/HIGH before integrating.
-- Run `/pwnfactor:validate` to prove the change ACTUALLY works against the ground-truth oracle (not just that the diff is good or tests passed) - it writes the `.pwnfactor/gate.json` artifact the Stop-hook enforces. (Needs `ground_truth_oracle:` in the profile.)
+- Run `/pwnfactor:validate` to prove the change ACTUALLY works against the ground-truth oracle (not just that the diff is good or tests passed) - it writes the `.pwnfactor/gate.json` artifact the Stop-hook checks (the hook verifies A gate passed for this
+  exact content - it cannot tell a review from an oracle validation, so running BOTH here is the discipline that
+  makes the gate mean anything). (Needs `ground_truth_oracle:` in the profile.)
 - Run the project's real tests/lint. Capture the **actual command and output** - never claim a green you didn't see.
 
 ### 5. Integrate
