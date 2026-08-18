@@ -36,9 +36,10 @@ Trivial change (typo, one-liner, obvious fix)? Skip this and just do it. This is
 - **Safety rails (hard):** any fleet- / host- / data-mutating capability ships with dry-run + per-unit checkpoint + rollback. No exceptions.
 
 ### 4. Verify
-- Run `/pwnfactor:gg` on the diff - it scales review depth to the footprint (docs-only skips,
-  small routine diffs get one reviewer, features get the panel, risk goes adversarial). Address
-  CRITICAL/HIGH before integrating.
+- Run `/pwnfactor:gg` on the diff - it scales review depth to the footprint on a five-rung ladder
+  (docs-only skips, a mechanical diff gets Codex alone, small real-logic gets Codex + 1, a feature
+  gets the panel, any HIGH signal goes adversarial regardless of size). You do not pick the depth;
+  gg reads the diff and picks it. Address CRITICAL/HIGH before integrating.
 - Run `/pwnfactor:validate` to prove the change ACTUALLY works against the ground-truth oracle (not just that the diff is good or tests passed) - it writes the `.pwnfactor/gate.json` artifact the Stop-hook enforces. (Needs `ground_truth_oracle:` in the profile.)
 - Run the project's real tests/lint. Capture the **actual command and output** - never claim a green you didn't see.
 
