@@ -125,7 +125,7 @@ inheriting that tier burns budget without buying rigor - the same silent-inherit
 
 Hand the panel an **already green coherent diff**. The panel is the GATE, not the loop's first QA.
 
-**Trust no subagent's "done."** Every agent returns a 1-2k-token distillation: files touched, exact command + output, residual risks. Treat it as a **CLAIM**.
+**Trust no subagent's "done."** Every agent returns a 1-2k-token distillation: files touched, exact command + output, residual risks, **and any decision made or alternative rejected along the way** (the lead writes those into the cards at close-out - a worker that omits them erases the WHY). Treat it as a **CLAIM**.
 - **Re-verify proportionally.** Independently re-run the exact cited command for every claim a merge/safety decision RESTS ON (riskiest unit's green, any safety-rail assertion, any contract consumers depend on). Spot-check low-risk units (read the diff, confirm the test exists). **Never act on a mutating or credential claim without re-running its cited proof.**
 - **"Verbatim output" means TEST-RUNNER output** (pytest/tsc/ruff/etc). **Host-command output can carry secrets - never paste it verbatim; record redacted proof + the redaction reason.**
 
@@ -138,6 +138,21 @@ Hand the panel an **already green coherent diff**. The panel is the GATE, not th
 **The verify gate (`gg`) - runs ONCE, on the assembled whole diff, after green:**
 - Mechanical first (tests/lint/typecheck), then the 3 Claude reviewers, then **Codex** (`/codex:review` routine; `/codex:adversarial-review` for any unit touching credentials/vault, authz/RBAC, command construction, untrusted-data egress, migrations, file upload, or a destructive/mutating path). **Codex runs once per feature - don't hammer it**, and leave its Stop-hook gate OFF. Read only its final result.
 - Do **not** invoke the panel mid-loop. The boundary skeptic (above) is the lead's own, not the panel.
+
+**LEAD'S CLOSE-OUT (after the gate, before calling the feature done).** The lead carries the SAME
+Integrate discipline `run` does - workers never do this, the lead ALWAYS does:
+- **Card write-back.** If the repo has system cards (`cards/` - see `../cards/SKILL.md`): for every
+  carded subsystem this feature touched, update the card's contract / invariants / decisions in the
+  SAME integration commit - including **rejected alternatives workers surfaced** (an approach a
+  builder tried and abandoned is DECISIONS material, and it dies with the worker's context if the
+  lead does not write it down). Then run `tools/card_check.py` and require green. Routine changes
+  that altered no contract, invariant, decision, or trap touch no card.
+- **Documentation wrap-up.** Same rule as `run` Integrate: a feature that altered architecture,
+  contracts, guarantees, or scope is NOT integrated until the governing documents assert the new
+  facts - update them, then grep for dependents and read every hit. A doc update the operator has
+  to ask for was late.
+- **Antipattern harvest.** Did anything survive a plausible-looking check across ANY worker? Write
+  the entry now if the project keeps a log.
 
 ## 7. Note-taking & compaction
 
