@@ -21,6 +21,15 @@ The lead's control loop for ONE chosen feature: **shape → (scout if blind) →
 
 ## 1. Solo vs orchestrate (this governs *mutating builders*)
 
+**THE PRICE, STATED PLAINLY, BECAUSE IT DECIDES MOST CALLS.** Anthropic's published multi-agent
+numbers: agents use about **4x** the tokens of a chat, and multi-agent systems about **15x**. That
+buys breadth and independent verification - it does not buy correctness on work one context could
+have held. Their named failure mode is spawning **50 subagents for a simple query**; the fix is not
+a smaller number, it is asking whether the work has independent branches at all. Their observed
+useful scale for genuinely wide work is **3-5 parallel subagents**, which is why this skill's width
+ceiling is ~4. **Scale EFFORT before agent count** - a solo builder at `xhigh` is cheaper and
+usually better than three at `medium` on work that never split.
+
 > **Read-only fan-out is not gated here.** Scouts, parallel research, and verification skeptics are the lead's dynamic discretion - no worktree, no conflict, no "name your signal" ceremony. The rules below decide only when to split *builders* that write.
 
 **Build the unit graph (§2) FIRST. The graph decides - not how the feature "feels."**
@@ -44,6 +53,15 @@ Any fail → solo. If your project enforces one-component-per-task, a cross-comp
 ## 2. Decomposition - shape before any code
 
 Produce a **one-screen unit graph** (no graph ⇒ not ready to fan out). Per candidate unit tag: `{component, files-touched, shared-contract? migration? mutating? risk}`. Edge **A→B** if they share a file, B imports A's new contract, or B depends on A's migration/ordering.
+
+**TEST EVERY EDGE BEFORE YOU DRAW IT - most of them are not real.** An edge means ONE thing:
+**B reads what A produced.** Sequence is not dependency. If B merely happens to be written under A
+in your plan, that edge is imaginary and you are paying for it in wall clock. Ask of every arrow:
+*does this unit actually consume the previous unit's output, or is it just next on the list?* Delete
+the ones that fail. A chain of twelve typically hides three real dependencies and nine fake ones,
+and every fake edge is a builder idling behind work it never needed. This test is what turns a
+sequential plan into a pipeline - and it runs BEFORE topology (section 3), because topology is just the
+answer to how many real edges survived.
 
 **Cut along the repo-enforced seams in your profile** (its *Components & parallel seams*). **A unit editing two components is mis-cut** - split it, coordinate via the shared contract.
 
@@ -119,13 +137,41 @@ inheriting that tier burns budget without buying rigor - the same silent-inherit
    Keep the ids as agents return. And pin flatness mechanically: recent CC re-enabled nested
    subagent spawning (depth 3 by default) - set `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` in the
    project's env so "one lead, one flat layer of workers" is enforced by the harness, not by
-   prose in a dispatch prompt.
+   prose in a dispatch prompt. **Belt and braces:** omit `Agent` from a builder's
+   `tools:` (or scope it with `Agent(<type>)`) so a worker structurally CANNOT spawn - a tools
+   allowlist is enforced by the harness even where the env var is not set.
+9. **Bound the runaway.** Give builders a `maxTurns` proportional to the unit (a mechanical unit
+   does not need 40 turns). An agent that has not converged in its budget is a spec gap to escalate,
+   not a loop to extend - this is the harness-level version of "repeated auto-fix on the same red
+   is a spec/contract gap" (section 6).
 
 ## 6. The build → verify loop
 
 Hand the panel an **already green coherent diff**. The panel is the GATE, not the loop's first QA.
 
-**Trust no subagent's "done."** Every agent returns a 1-2k-token distillation: files touched, exact command + output, residual risks, **and any decision made or alternative rejected along the way** (the lead writes those into the cards at close-out - a worker that omits them erases the WHY). Treat it as a **CLAIM**.
+**Trust no subagent's "done."** Every agent returns a 1-2k-token distillation. **Brief it for a
+FIXED RETURN SHAPE, not prose** - a return the lead has to interpret costs another model call and
+another chance to be wrong about something already known. Require these fields:
+
+```
+status:     green | red | BLOCKED         (see the failure rule below)
+unit:       <unit id>
+files:      <paths touched>               (paths, never pasted diffs)
+proof:      <exact command> -> <verbatim test-runner output, pass/fail counts>
+decisions:  <ruling + WHY>, and any ALTERNATIVE REJECTED and why
+risks:      <residual risks / what was not covered>
+handoff:    <artifact paths or ids the next unit reads>   (references, not contents)
+```
+
+**A failure must be a VALUE, not a hang.** A builder that cannot proceed returns
+`status: BLOCKED` with the reason and what would unblock it - it does NOT thrash, invent a
+workaround, or stall waiting. Blocked-as-data lets the lead route (re-brief, re-barrier, escalate);
+blocked-as-silence stalls the whole fan-out behind one unit. Same rule for the lead: one BLOCKED
+unit never takes its independent siblings down - collect what settled, note what did not, and
+decide whether that is enough to continue.
+
+`decisions` is load-bearing: the lead writes it into the cards at close-out, and **a rejected
+alternative dies with the worker's context if the worker does not report it.** Treat it as a **CLAIM**.
 - **Re-verify proportionally.** Independently re-run the exact cited command for every claim a merge/safety decision RESTS ON (riskiest unit's green, any safety-rail assertion, any contract consumers depend on). Spot-check low-risk units (read the diff, confirm the test exists). **Never act on a mutating or credential claim without re-running its cited proof.**
 - **"Verbatim output" means TEST-RUNNER output** (pytest/tsc/ruff/etc). **Host-command output can carry secrets - never paste it verbatim; record redacted proof + the redaction reason.**
 

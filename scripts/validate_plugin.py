@@ -5,6 +5,7 @@ Run locally or in CI (see .github/workflows/validate.yml):
     python scripts/validate_plugin.py
 """
 import json
+import re
 import os
 import glob
 import sys
@@ -54,8 +55,25 @@ for skill in glob.glob(os.path.join(base, "skills", "*", "SKILL.md")):
     if lines > 500:
         errors.append(f"skill {name}: SKILL.md is {lines} lines (limit 500)")
 
+VALID_EFFORT = {"low", "medium", "high", "xhigh", "max"}
+VALID_MODEL = {"sonnet", "opus", "haiku", "fable", "inherit"}
+
 for agent in glob.glob(os.path.join(base, "agents", "*.md")):
     name = os.path.basename(agent)
+    head = frontmatter(agent)
+    if head is not None:
+        # Silent inheritance is the documented cost trap: an agent with no model: rides the
+        # main-loop model, and one with no effort: rides the session effort. Both must be explicit.
+        m = re.search(r'^model:\s*(\S+)', head, re.M)
+        e = re.search(r'^effort:\s*(\S+)', head, re.M)
+        if m is None:
+            errors.append(f"agent {name}: frontmatter missing 'model' (would silently inherit)")
+        elif m.group(1) not in VALID_MODEL and not m.group(1).startswith("claude-"):
+            errors.append(f"agent {name}: model '{m.group(1)}' is not a documented value")
+        if e is None:
+            errors.append(f"agent {name}: frontmatter missing 'effort' (would silently inherit)")
+        elif e.group(1) not in VALID_EFFORT:
+            errors.append(f"agent {name}: effort '{e.group(1)}' not in {sorted(VALID_EFFORT)}")
     head = frontmatter(agent)
     if head is None or "name:" not in head or "description:" not in head:
         errors.append(f"agent {name}: frontmatter must include 'name' and 'description'")
