@@ -52,7 +52,7 @@ Any fail → solo. If your project enforces one-component-per-task, a cross-comp
 
 ## 2. Decomposition - shape before any code
 
-Produce a **one-screen unit graph** (no graph ⇒ not ready to fan out). Per candidate unit tag: `{component, files-touched, shared-contract? migration? mutating? risk}`. Edge **A→B** if they share a file, B imports A's new contract, or B depends on A's migration/ordering.
+Produce a **one-screen unit graph** (no graph ⇒ not ready to fan out). Per candidate unit tag: `{component, files-touched, shared-contract? migration? mutating? external-resource? risk}` - `external-resource` names any shared mutable target OUTSIDE the worktree: a database/schema, port, container, queue, sandbox tenant, device, rate-limited API. **Worktrees isolate FILES, nothing else** - two file-disjoint builders mutating the same external target manufacture false reds and false greens. Same resource means same unit, or strictly serialized. Edge **A→B** if they share a file, B imports A's new contract, or B depends on A's migration/ordering.
 
 **TEST EVERY EDGE BEFORE YOU DRAW IT - most of them are not real.** An edge means ONE thing:
 **B reads what A produced.** Sequence is not dependency. If B merely happens to be written under A
@@ -125,7 +125,7 @@ inheriting that tier burns budget without buying rigor - the same silent-inherit
 
 1. **Worktree isolation is the LEAD's job.** Prefer the harness-native primitive - spawn each parallel builder with **`isolation: "worktree"`** (the Agent/Workflow tool auto-creates a fresh worktree and cleans it up). If creating worktrees by hand instead, the **lead** runs `git worktree add .claude/worktrees/<unit> <base>` BEFORE spawning and launches each builder pinned to its own path. Either way the invariant is the same: **each builder's first action is `git rev-parse --show-toplevel`; it ABORTS if its toplevel equals the lead's repo root or another unit's path.** Distinct toplevel per concurrent builder, **asserted not assumed**. Read-only scouts get NO worktree.
 2. **Builders NEVER `git add`/`commit`** (hard rule - index races). They return a distilled summary + diff; the **LEAD** pulls each worktree's diff, integrates on the feature branch, and makes checkpoint commits at barriers.
-3. **Rebase a stale base before measuring green.** A worktree cut from an older commit is reconciled onto current HEAD *before* its self-verify.
+3. **Rebase a stale base before measuring green.** A worktree cut from an older commit is reconciled onto current HEAD *before* its self-verify. **The mechanism respects the no-commit rule:** the builder never rebases a dirty tree - the LEAD takes the builder's returned diff, applies it onto a fresh worktree cut from current HEAD, and hands it back (or re-briefs on conflict). A builder told to rebase with uncommitted work would have to commit or stash, and builders do neither.
 4. **Topological order:** shared-contract barrier → migration barrier → **run your profile's refresh step (rebuild/redeploy) and assert the new schema + code path are live** → release builders that smoke-test the live backend → independent builders (pipeline) → lead integrates → VERIFY panel. (Unit-test-only builders may start earlier.)
 5. **Refresh non-hot-reloading services at server/migration checkpoints.** If your stack builds an artifact that does NOT hot-reload (e.g. a container image), rebuild+recreate it after the relevant merge - your profile's **Build/refresh** step. A stale artifact fakes green.
 6. **Safety rails are unit-integrity constraints - and confirm your project's rollback MODEL (often checkpoint-FIRST, not auto-undo).** Many systems don't auto-roll-back a failed apply: rollback is a *separate, operator-initiated, checkpoint-driven* action, and a failed unit may not even be rollback-eligible (your profile's **Mutation & rollback model**). So a mutating unit is **green only when an automated test proves: (a) dry-run yields a plan with no side effects; (b) apply records a checkpoint; (c) the rollback path restores prior state from that checkpoint, confirmed by readback; (d) audit/records are metadata-only.** Run against real test targets or faithful transport mocks (mocks must decode/route exactly like the real transport). **Asserting rollback merely exists, or assuming a mid-apply failure auto-rolls-back, is RED.** Effort never buys past a HITL gate before an irreversible action.
@@ -181,7 +181,7 @@ alternative dies with the worker's context if the worker does not report it.** T
 - **LOOP-UNTIL-GREEN:** build → run the unit's tests/typecheck/lint → on red, feed the **verbatim test failure** BACK to the builder via `SendMessage` - it holds the unit's context, so a warm resume beats a fresh fixer re-reading everything (§5.8). Spawn a separate lower-tier fixer only when the builder is gone or the fix is purely mechanical. **K = auto-fix attempts before escalating: default 3; 2 for shape-obvious units.** Repeated auto-fix on the same red is a spec/contract gap - STOP and escalate the failure + your hypothesis.
 - **SKEPTIC PASS (opt-in, not reflexive):** for a risk-bearing unit, the lead runs ITS OWN fresh-context skeptic at the unit boundary. Trigger it **after a red finding, or on the single highest-risk unit** - NOT as a default loop on every boundary (that's theater and burns rate limits). One clean pass for reversible work; up to 2-3 for irreversible/mutating/secret/authz.
 
-**The verify gate (`gg`) - runs ONCE, on the assembled whole diff, after green:**
+**The verify gate (`gg`) - runs ONCE, on the assembled whole diff, after green AND after close-out** (cards and doc updates are part of the diff it reviews - close-out edits landing after the gate would ship unreviewed):
 - Mechanical first (tests/lint/typecheck), then the 3 Claude reviewers, then **Codex** (`/codex:review` routine; `/codex:adversarial-review` for any unit touching credentials/vault, authz/RBAC, command construction, untrusted-data egress, migrations, file upload, or a destructive/mutating path). **Codex runs once per feature - don't hammer it**, and leave its Stop-hook gate OFF. Read only its final result.
 - Do **not** invoke the panel mid-loop. The boundary skeptic (above) is the lead's own, not the panel.
 
@@ -211,14 +211,21 @@ sibling's green stand in for it.
 
 Report the census in the close-out summary: `N units dispatched, N merged, M dropped (reasons)`.
 Those numbers are the operator's proof that nothing silently fell out.
+**And the census counts UNITS - it cannot see a capability no unit ever covered.** Close the other
+end too: walk `run` Frame's done-criteria and require each to be covered by a MERGED unit or
+explicitly descoped WITH THE OPERATOR. All counts can reconcile while a required capability is
+absent; only the criteria walk catches that.
 
-**LEAD'S CLOSE-OUT (after the gate, before calling the feature done).** The lead carries the SAME
+**LEAD'S CLOSE-OUT (BEFORE the gate - the panel must review the card and doc updates too).** The lead carries the SAME
 Integrate discipline `run` does - workers never do this, the lead ALWAYS does:
 - **Card write-back.** If the repo has system cards (`cards/` - see `../cards/SKILL.md`): for every
   carded subsystem this feature touched, update the card's contract / invariants / decisions in the
   SAME integration commit - including **rejected alternatives workers surfaced** (an approach a
   builder tried and abandoned is DECISIONS material, and it dies with the worker's context if the
-  lead does not write it down). Then run `tools/card_check.py` and require green. Routine changes
+  lead does not write it down). **A worker's rejection is a claim, not canon:** record it only
+  with its evidence (the failing command/output from the worker's `proof` field), or write it as
+  "WHY: unrecorded - flagged". An unevidenced worker claim written as a permanent decision is how
+  a hallucinated dead end becomes architecture. Then run `tools/card_check.py` and require green. Routine changes
   that altered no contract, invariant, decision, or trap touch no card.
 - **Documentation wrap-up.** Same rule as `run` Integrate: a feature that altered architecture,
   contracts, guarantees, or scope is NOT integrated until the governing documents assert the new
@@ -229,9 +236,9 @@ Integrate discipline `run` does - workers never do this, the lead ALWAYS does:
 
 ## 7. Note-taking & compaction
 
-Persist `reports/loop-<feature>.md` **whenever fan-out width is ≥2 - not optionally, and WRITTEN BEFORE THE FIRST BUILDER SPAWNS.** The ledger is what the unit census (section 6) counts against, so a ledger created after the fact cannot catch a unit that died early. Store **IDENTIFIERS, not contents**: unit DAG + file-contention map; per-unit status (`pending→building→self-verified→panel-passed→MERGED|DROPPED`, the last two terminal); open questions + **paths/queries to pull returns back on demand**; safety-rail decisions. Never paste full transcripts or diffs.
+Persist `reports/loop-<feature>.md` **whenever fan-out width is ≥2 - not optionally, and WRITTEN BEFORE THE FIRST BUILDER SPAWNS.** The ledger is what the unit census (section 6) counts against, so a ledger created after the fact cannot catch a unit that died early. Store **IDENTIFIERS, not contents**: unit DAG + file-contention map; per-unit status (`pending→building→self-verified→MERGED|DROPPED`, the last two terminal; there is NO per-unit panel state - the gate reviews the assembled whole diff once, so a `panel-passed` rung would describe a workflow that does not exist); open questions + **paths/queries to pull returns back on demand**; safety-rail decisions. Never paste full transcripts or diffs.
 
-Use a **git-tracked** path for resumable state - NOT a git-ignored report subdir. The file may contain only credential *names* (§5.7). A re-invoked/compacted lead resumes from the file without re-deriving the DAG.
+Use a **git-tracked** path for resumable state - NOT a git-ignored report subdir. **The durable half is artifact PATHS (returned diffs and reports written to files); agent ids are session-scoped conveniences** - a fresh session or another machine cannot dereference an id, so any evidence a resume depends on must exist as a file the ledger points at. The file may contain only credential *names* (§5.7). A re-invoked/compacted lead resumes from the file without re-deriving the DAG.
 
 ## 8. Smells
 
@@ -251,11 +258,11 @@ Use a **git-tracked** path for resumable state - NOT a git-ignored report subdir
 *The one place repo specifics live - your project's instance differs; the method above is what ports.*
 
 **"Add partial refunds"** (extends the refund flow; **payment-mutating** ⇒ full rails). Deliberate, **high effort**.
-1. **SHAPE** (familiar subsystem, lead maps edges itself - no scout). **U0** `packages/shared`: `PartialRefundRequest` + a new `OrderStatus` value + both barrels + parity test. **U1** `apps/api`: the refund service's partial path behind **idempotency-key + checkpoint + reversal**, reuse amount-validation, metadata-only audit. **U2** `apps/web`: the refund UI + confirm-on-irreversible. Edges U1→U0, U2→U0; **U1 ⊥ U2** (api vs web - a real seam). New status ⇒ a migration. **Checkpoint design:** a refund records a **`RefundLog` (metadata, never card data)** and is **idempotency-keyed** - re-invoking with the same key is a no-op, never a double refund.
+1. **SHAPE** (familiar subsystem, lead maps edges itself - no scout). **U0** `packages/shared`: `PartialRefundRequest` + a new `OrderStatus` value + both barrels + parity test. **U1** `apps/api`: the refund service's partial path behind **idempotency-key + checkpoint + reversal**, reuse amount-validation, metadata-only audit. **U2** `apps/web`: the refund UI + confirm-on-irreversible. Edges U0→U1, U0→U2 (arrows run producer to consumer - U1/U2 READ U0's contract); **U1 ⊥ U2** (api vs web - a real seam). New status ⇒ a migration. **Checkpoint design:** a refund records a **`RefundLog` (metadata, never card data)** and is **idempotency-keyed** - re-invoking with the same key is a no-op, never a double refund.
 2. **CONTRACT BARRIER.** ONE builder lands U0 (high) → returns diff → lead runs the parity test, commits the shared checkpoint, merges.
 3. **FAN-OUT.** Lead spawns **U1 (high, Opus)** + **U2 (medium, Sonnet)** each with `isolation: "worktree"`; each asserts a distinct toplevel; neither commits. U1 green = unit tests **AND** the rail proof: dry-run/preview (no charge) → the refund records a `RefundLog` → re-invoking the same idempotency-key is a no-op → the processor's sandbox state reads back as refunded.
 4. **SELF-VERIFY.** Lead pulls both diffs, **re-runs U1's rail proof itself**, runs one boundary skeptic on U1 ("any path double-charging or putting card data in a log/payload?"), spot-checks U2, scrubs notes.
-5. **HANDOFF.** Whole diff → mechanical checks → Claude panel (`/pwnfactor:gg`) → **`/codex:adversarial-review`** (U1 payment-mutating + security-sensitive), once → **`/pwnfactor:validate`** against the staging oracle.
+5. **HANDOFF.** Whole diff → mechanical checks → Claude panel (`/pwnfactor:gg` at ADVERSARIAL depth - the gate already runs adversarial Codex once, INSIDE the panel; nothing invokes Codex a second time) → **`/pwnfactor:validate`** against the staging oracle.
 
 *Counterfactual A:* a new refunds **table** ⇒ split into **U0** (`packages/shared` contract) and a **separate `U-mig`** (`apps/api` Prisma migration + `migration.test.ts`) - two sequential barriers, never one unit (a shared unit must not own a server migration). Re-seed the demo DB after `U-mig` before U1 validates the live backend. *Counterfactual B:* if partial and full refund share one service function, they are **ONE unit** - collapse, don't fan out.
 

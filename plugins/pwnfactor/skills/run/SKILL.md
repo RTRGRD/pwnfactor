@@ -33,7 +33,7 @@ Trivial change (typo, one-liner, obvious fix)? Skip this and just do it. This is
 - **Solo:** implement directly, matching surrounding idioms. Keep a running note of decisions/open items for long features (so context stays compaction-friendly).
 - **Orchestrated:** follow `swarm` - worktree isolation for parallel mutation, no commits from parallel agents.
 - **Self-verify continuously:** run the narrowest test/build that proves each step. Don't accumulate unverified work.
-- **Safety rails (hard):** any fleet- / host- / data-mutating capability ships with dry-run + per-unit checkpoint + rollback. No exceptions.
+- **Safety rails (hard):** any fleet- / host- / data-mutating capability ships with dry-run + per-unit checkpoint + rollback. No exceptions. **Rollback means the strongest recovery the domain supports:** true state restoration where possible; a COMPENSATING action where reversal is physically impossible (a payment refunds, it does not un-happen; a forward-only migration recovers via expand/contract, not a down-migration). Naming which one applies is part of the unit's design.
 
 ### 4. Verify
 - Run `/pwnfactor:gg` on the diff - it scales review depth to the footprint on a five-rung ladder

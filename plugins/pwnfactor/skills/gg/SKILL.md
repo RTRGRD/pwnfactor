@@ -18,7 +18,7 @@ Copy this checklist and work it top to bottom:
 ```
 Review Panel:
 - [ ] 1. Scope the diff (base ref + changed files)
-- [ ] 2. Classify risk + footprint -> pick DEPTH (SKIP / SOLO / PANEL / ADVERSARIAL)
+- [ ] 2. Classify risk + footprint -> pick DEPTH (SKIP / CODEX / SOLO / PANEL / ADVERSARIAL)
 - [ ] 3. Run the depth's reviewers (parallel, on the tier's model)
 - [ ] 4. Codex cross-model review (per depth, if available)
 - [ ] 5. Cross-verify + dedupe findings
@@ -35,7 +35,7 @@ Review Panel:
 - Summarize what changed (files, surfaces) in 2-3 lines. If the diff is empty, stop and say so.
 
 ### 2. Classify risk → pick tier
-Apply this compact rubric (canonical, fuller version: `run/risk-tiers.md`):
+Apply this compact rubric (canonical, fuller version: `../run/risk-tiers.md`):
 
 | Signal present in the diff | Tier |
 |---|---|
@@ -43,6 +43,7 @@ Apply this compact rubric (canonical, fuller version: `run/risk-tiers.md`):
 | DB migrations, schema or shared-contract changes (e.g. `packages/shared`) | HIGH |
 | Fleet- / host- / data-mutating actions, deletes, payments, anything irreversible | HIGH |
 | Untrusted input parsing, deserialization, shell-out, dynamic SQL, file/path handling | HIGH |
+| Input sanitization/encoding boundaries, concurrency-sensitive or hot paths, dependency/lockfile changes, CI workflow permissions, PII egress/telemetry | HIGH |
 | Everything else (UI, internal refactors, docs, additive pure functions) | ROUTINE |
 
 **ROUTINE → Sonnet reviewers + regular Codex. HIGH → Opus reviewers + adversarial Codex. When in doubt, treat as HIGH.**
@@ -53,8 +54,8 @@ diff is theater that burns tokens and rate limits:
 
 | Depth | When | What runs |
 |---|---|---|
-| **SKIP** | docs / comments / config-typo only; no executable code changed | no reviewers. Note "depth: skip (docs-only)" in chat; still write the gate artifact (verdict `ship`) |
-| **CODEX** | ROUTINE and MECHANICAL: roughly <=20 changed lines, one file, no new branch/logic - a rename, a constant, a copy string, a config value, a dependency bump, a comment pass | **Codex alone** (regular review). Zero Claude tokens. A mechanical diff has almost no state to reason about, so a second reviewer buys duplication, not coverage |
+| **SKIP** | docs / comments / config-typo only; no executable code changed. Docs that ARE executable agent behavior (skill files, agent prompts, hooks config - anything a model follows as instructions) are NOT docs-only: route them by what they control, exactly as if they were code | no reviewers. Note "depth: skip (docs-only)" in chat; still write the gate artifact (verdict `ship`) |
+| **CODEX** | ROUTINE and MECHANICAL: roughly <=20 changed lines, one file, no new branch/logic - a rename, a constant, a copy string, a config value, a dependency bump, a comment pass | **Codex alone** (regular review). Zero Claude tokens. A mechanical diff has almost no state to reason about, so a second reviewer buys duplication, not coverage. If Codex is unavailable (health-check verified), one `panel-code-review` subagent runs instead - CODEX depth degrades to a different single reviewer, never to zero review |
 | **SOLO** | ROUTINE, small (roughly <=50 changed lines), one surface, zero HIGH signals, but carrying REAL LOGIC - a new branch, a changed condition, error handling, a state update | **Codex (regular) plus one `panel-code-review` subagent** on the tier's model. Real logic is where a lone reviewer has nothing to disagree with, and this skill's own rule is that a reviewer is a lead, not a fact. No simplifier, no security agent - their surfaces are what SOLO already excluded. If Codex is unavailable (health-check verified, never assumed), the Claude reviewer runs alone and the report says so |
 | **PANEL** | any real feature: multi-file, new surface, or nontrivial logic (ROUTINE) | all 3 reviewers + regular Codex - the default for finished features |
 | **ADVERSARIAL** | ANY HIGH signal, regardless of size (a 3-line authz change is ADVERSARIAL) | all 3 reviewers on Opus + adversarial Codex; every CRITICAL/HIGH finding verified against the code |
@@ -76,7 +77,7 @@ all - Codex (step 4) is the whole review. At SOLO spawn `panel-code-review` alon
 At PANEL/ADVERSARIAL spawn all three:
 Spawn the depth's subagents **in parallel** via the Agent tool, each with `model` set EXPLICITLY to
 the tier's model (ROUTINE = `sonnet`, HIGH = `opus`) - never omit `model:` (it silently inherits
-the main-loop model; on a frontier main loop that burns the metered budget - `run/model-economics.md`).
+the main-loop model; on a frontier main loop that burns the metered budget - `../run/model-economics.md`).
 **Reasoning effort rides in each agent's frontmatter, not the Agent call** - `effort:` is a documented
 subagent frontmatter field (`low|medium|high|xhigh|max`) that overrides the session level while that
 agent runs (code-review and security run `effort: high`, the simplifier `effort: medium`). There is no
@@ -116,7 +117,7 @@ this costs one message, not a re-read of the repo. They hold the diff, the const
 own findings - so they can say
 whether a fix actually addressed the thing they raised, which a fresh agent structurally cannot.
 Respawn only for a genuinely different surface, or when an independent second opinion is the point.
-See `run/model-economics.md`, "the second mechanical rule".
+See `../run/model-economics.md`, "the second mechanical rule".
 
 ### 5. Cross-verify + dedupe (don't trust raw output)
 - Merge all findings; dedupe by `(file, line, issue)`.

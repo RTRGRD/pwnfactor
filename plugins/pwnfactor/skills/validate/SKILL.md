@@ -89,7 +89,10 @@ tell a `gg` artifact (diff-reviewed) from a `validate` one (oracle-validated); b
 the hook enforces *"a gate passed for this HEAD,"* and the DISCIPLINE of running `validate` (not just `gg`)
 at Verify is what makes that gate mean *does-it-work*. `validate`'s artifact is a superset of `gg`'s (extra
 `lanes`/`oracle`/... fields the hook ignores). **`.pwnfactor/` is gitignored / ephemeral - keep RAW oracle
-output in the report, not this file (metadata only).**
+output in the report, not this file (metadata only).** And redact BEFORE the report: oracle
+responses routinely carry tokens, credentials, PII, or production payloads - the same rule as
+swarm's host-command output rule. Record redacted evidence plus the redaction reason; a durable
+report is exactly where a leaked secret lives longest.
 
 ## 5. Baseline / regression ledger
 
@@ -111,7 +114,7 @@ limit available," never fabricate certainty.
 ## When to run it (cadence - match the check's COST to its frequency)
 
 `validate` is the *final* gate, not the only check: **self-verify** after every chunk (cheap -> always);
-**review checkpoint** (`gg` + codex) at each major decision, BEFORE it's baked in - not after the commit;
+**decision checkpoint** at each major decision BEFORE it's baked in - the lead's OWN fresh-context skeptic, not the panel (inside an orchestrated build the `gg` panel runs ONCE on the assembled diff, swarm section 6, and this file does not overrule that);
 **validate** at Integrate, on the whole, re-run after fixes. Reviews-at-decisions and the final gate catch
 DIFFERENT failures (a wrong fork found after three commits vs a vacuous green) - you need both.
 
