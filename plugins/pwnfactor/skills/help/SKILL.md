@@ -38,7 +38,9 @@ boot (once)  ->  cards scaffold (once)
 
 - **run** is the default path; it calls the others at the right moments.
 - **swarm** only when the feature genuinely splits; one agent in one loop is the default.
-- **gg** routes depth by risk: SKIP / SOLO / PANEL / ADVERSARIAL. Small diffs stay cheap.
+- **gg** routes depth by risk and footprint on five rungs: SKIP (docs, 0 reviewers) / CODEX
+  (mechanical, Codex alone) / SOLO (small real logic, Codex + 1) / PANEL (features, 3 + Codex) /
+  ADVERSARIAL (any HIGH signal, Opus panel). Small diffs stay cheap; risk never argues down.
 - **validate** answers "did the REAL thing accept it" - a green suite is a claim, not proof.
 - **cards** answers "will the NEXT session know why" - update the touched card in the same
   commit at Integrate; `tools/card_check.py` reds if a card goes stale.

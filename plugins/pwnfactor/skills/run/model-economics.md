@@ -84,10 +84,10 @@ id you have dropped is work you have already paid for and thrown away.
 Model and reasoning effort are separate spends that MULTIPLY (swarm's two-dials law). The same
 silent-inheritance rule applies: every spawned agent takes an explicit effort tier on the
 harness's 5-step scale (`low | medium | high | xhigh | max`) - via the agent definition's
-`effort:` frontmatter field or the Workflow `agent(..., {effort})` option. There is no per-agent
-extended-thinking toggle (thinking inherits from the session globally), so `effort:` is the only
-per-agent depth dial; the Agent tool also has no per-call effort parameter, which is why the
-frontmatter carries it. Pair the dials deliberately: `haiku`/`sonnet` x
+`effort:` frontmatter field or the Workflow `agent(..., {effort})` option. The frontmatter field
+is the documented per-agent control - it overrides the session's effort level while that agent
+runs - and the Agent tool has no per-call effort parameter, which is why the frontmatter
+carries it. Pair the dials deliberately: `haiku`/`sonnet` x
 `low`-`medium` for mechanical bulk; `opus` x `high` for typical HIGH-surface implementation;
 `opus` x `xhigh`/`max` only for the hardest adjudication/verify/novel-design units. A cheap
 model at max effort is usually a worse buy than the next model up at medium.

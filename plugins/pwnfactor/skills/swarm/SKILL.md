@@ -103,10 +103,10 @@ answer to how many real edges survived.
 **Effort is a per-agent knob now - set it explicitly, like `model:`.** The harness exposes
 reasoning effort per spawned agent; the dial is no longer prose the lead holds in its head:
 - **Agent-tool subagents** - the agent definition's frontmatter carries `model:` and `effort:`
-  (the documented CC field). There is NO per-agent extended-thinking toggle - thinking inherits
-  from the session globally - so **`effort:` IS the per-agent depth dial**. The Agent tool has no
-  per-call effort parameter either: pick (or define) the agent definition matching the unit's
-  tier, and still pass `model:` per call (`run/model-economics.md`).
+  (documented CC fields; `effort:` takes `low|medium|high|xhigh|max` and OVERRIDES the session
+  level while that agent runs - **it IS the per-agent depth dial**). The Agent tool has no
+  per-call effort parameter: pick (or define) the agent definition matching the unit's tier,
+  and still pass `model:` per call (`run/model-economics.md`).
 - **Workflow scripts** - `agent(prompt, {model, effort})` takes effort per call:
   `low | medium | high | xhigh | max`.
 - **Scale mapping** - the doctrine tiers map onto the 5-step scale as medium -> `medium`,
