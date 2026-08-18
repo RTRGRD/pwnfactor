@@ -53,6 +53,10 @@ Trivial change (typo, one-liner, obvious fix)? Skip this and just do it. This is
   profile, a CI config, the reason string on a skipped test), and amending only the definition
   leaves the rest asserting the old world with full authority. A doc update the operator has to
   ask for is a doc update that was late.
+  **If the repo has system cards** (a `cards/` directory - see `../cards/SKILL.md`): a change
+  that touched a carded subsystem's contract, invariant, decision, or known trap updates THAT
+  CARD in the same commit, and `tools/card_check.py` runs green before integrate. Routine
+  changes that alter none of those touch no card - cards are contracts, not a changelog.
 - **Antipattern harvest.** Before closing, ask: did anything here survive a plausible-looking
   check, and would it recur? If the project keeps an antipattern log, write the entry NOW -
   symptom, why it bites, what to do instead, where it was found. Closing a unit includes this

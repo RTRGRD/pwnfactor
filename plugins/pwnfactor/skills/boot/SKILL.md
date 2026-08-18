@@ -52,6 +52,7 @@ Boot sequence:
 | `/pwnfactor:ci` | wire + verify CI/CD (tailored tests, `@claude`, weekly security) | setting up / fixing CI |
 | `/pwnfactor:cards` | system cards - a versioned decision layer so sessions stop forgetting the architecture | once to scaffold, then per landing |
 | `/pwnfactor:boot` | this - set up a new repo | once per project |
+| `/pwnfactor:help` | the loadout screen - every command, when, and how they fit | whenever you forget |
 
 **Risk tiers:** routine vs **HIGH** (auth / secrets / migrations / mutating). HIGH = more thinking, Opus reviewers, and the panel goes adversarial.
 

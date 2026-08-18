@@ -21,6 +21,7 @@ Around that core sit four supporting skills:
 - **`/pwnfactor:sweep`** - a read-only **pre-prod security battery**: stack-aware static scan, SBOM + CVE, secret scan, optional Codex adversarial review, and (for a shipping binary) a local-AV-gated malware-reputation check, ending in GO / NO-GO.
 - **`/pwnfactor:ci`** - wire and verify CI/CD: tests tailored to your stack, an actor-gated `@claude` handler, and a weekly security scan.
 - **`/pwnfactor:cards`** - **system cards**: a versioned, per-subsystem decision-and-contract layer (contract, invariants, consumers, decisions with the WHY, known traps) with an auto-loaded index and a staleness checker that fails loudly when a card goes out of date. Sessions stop re-deriving decisions the repo already made.
+- **`/pwnfactor:help`** - the loadout screen: every command, what it does, when to use it, and how the pieces fit into one lifecycle.
 
 ## Install (in any project)
 
