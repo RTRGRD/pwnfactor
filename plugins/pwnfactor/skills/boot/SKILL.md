@@ -37,6 +37,7 @@ Boot sequence:
 - **Security armory** *(so `/pwnfactor:sweep` actually fires)* → detect the toolchain and walk the user through installing what's missing. **`pwsh` (PowerShell 7+) is the one hard requirement** → `winget install --id Microsoft.PowerShell --accept-source-agreements --accept-package-agreements` *(run elevated)*. Then the CVE backbone (**Syft + Grype**) and the per-stack scanner (Python `pip install pip-audit bandit` · Rust `cargo install cargo-audit cargo-geiger` · Electron `npx @doyensec/electronegativity` · Go `gosec`/`govulncheck`). **Offer to install the no-admin pieces yourself** - Syft/Grype binaries → `~/.security-audit-tools/` (the engine auto-discovers them), plus the pip tools. Full prereqs + per-stack matrix: `../sweep/reference.md`. *(No armory, no sweep - stock it before the first prod push.)*
 - **CI/CD** *(if GitHub)* → run **`/pwnfactor:ci`** - it tailors the workflows to your repo's real commands (from the profile), wires the actor-gated `@claude` handler + a weekly security scan, walks you through the secret/permission/tag steps via `gh`, and **verifies the first run is green**. *(Always-on tests = auto-turrets on every PR; `@claude` = on-demand air support. See `../ci/SKILL.md`.)*
 - **Codex co-op** → `/plugin install codex@openai-codex` + `/codex:setup`; **decline the Stop-hook gate** (it loops and drains your ammo). *(A second AI from a rival faction reviews your code - different model, sees what we can't. See `../gg/codex-integration.md`.)*
+- **System cards** *(the save file)* -> offer **`/pwnfactor:cards`** - one card per subsystem carrying contracts, invariants, and decisions with the WHY, plus a staleness checker that reds when a card goes out of date. *(This is what stops future sessions from re-deriving or violating decisions the repo already made. See `../cards/SKILL.md`.)*
 
 ## 3. GIT GUD (the loadout - list it ALL)
 > *Here's your full command list. Memorize it or perish... kidding. Mostly.*
@@ -49,6 +50,7 @@ Boot sequence:
 | `/pwnfactor:validate` | prove it ACTUALLY works - check the change against a ground-truth oracle | after `gg`, before ship |
 | `/pwnfactor:sweep` | pre-prod security sweep (secrets, CVEs, injection, rails) | before prod pushes / big builds |
 | `/pwnfactor:ci` | wire + verify CI/CD (tailored tests, `@claude`, weekly security) | setting up / fixing CI |
+| `/pwnfactor:cards` | system cards - a versioned decision layer so sessions stop forgetting the architecture | once to scaffold, then per landing |
 | `/pwnfactor:boot` | this - set up a new repo | once per project |
 
 **Risk tiers:** routine vs **HIGH** (auth / secrets / migrations / mutating). HIGH = more thinking, Opus reviewers, and the panel goes adversarial.
