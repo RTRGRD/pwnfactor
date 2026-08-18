@@ -185,6 +185,33 @@ alternative dies with the worker's context if the worker does not report it.** T
 - Mechanical first (tests/lint/typecheck), then the 3 Claude reviewers, then **Codex** (`/codex:review` routine; `/codex:adversarial-review` for any unit touching credentials/vault, authz/RBAC, command construction, untrusted-data egress, migrations, file upload, or a destructive/mutating path). **Codex runs once per feature - don't hammer it**, and leave its Stop-hook gate OFF. Read only its final result.
 - Do **not** invoke the panel mid-loop. The boundary skeptic (above) is the lead's own, not the panel.
 
+**UNIT CENSUS - RUN THIS FIRST, BEFORE ANYTHING ELSE IN CLOSE-OUT.** The failure this exists to
+kill: a unit that never finished gets merged with the batch and is discovered later, usually by the
+operator, usually as a bug. It happens because a fan-out has no natural closing moment - siblings
+land, the feature "feels" done, and a unit that died quietly leaves no gap anyone trips over.
+
+**Every unit in the DAG must reach a TERMINAL state, and there are exactly two:**
+- **MERGED** - and merged is proven by READING THE INTEGRATION DIFF, not by the ledger saying so.
+  The unit's files must actually appear in the assembled diff. A ledger row is a claim; the diff
+  is the fact. (Same rule as section 6's "trust no subagent's done", applied to the lead's own notes.)
+- **DROPPED** - explicitly, with a recorded reason and the operator told. Descoped, superseded by
+  another unit, blocked on something out of scope: all fine, all must be SAID.
+
+**There is no third state at close-out.** Count the units you dispatched, count the units in a
+terminal state, and require the two numbers to be EQUAL. A mismatch is a STOP - name the missing
+unit and resolve it before the feature is called done. Do not round it off, and do not let a
+sibling's green stand in for it.
+
+⚠ **The two ways units go missing, both worth checking by name:**
+1. **A dead agent nobody noticed.** A builder that errored, was stopped, or returned nothing leaves
+   its unit at `building` forever. Check the roster against the DAG, not your memory of it.
+2. **A compaction boundary.** The lead's context rolled and the DAG went with it. This is why the
+   ledger below is written to a git-tracked file BEFORE the fan-out, not after - a plan that only
+   exists in the lead's context is a plan that dies with it.
+
+Report the census in the close-out summary: `N units dispatched, N merged, M dropped (reasons)`.
+Those numbers are the operator's proof that nothing silently fell out.
+
 **LEAD'S CLOSE-OUT (after the gate, before calling the feature done).** The lead carries the SAME
 Integrate discipline `run` does - workers never do this, the lead ALWAYS does:
 - **Card write-back.** If the repo has system cards (`cards/` - see `../cards/SKILL.md`): for every
@@ -202,7 +229,7 @@ Integrate discipline `run` does - workers never do this, the lead ALWAYS does:
 
 ## 7. Note-taking & compaction
 
-Persist `reports/loop-<feature>.md` **only when fan-out width ≥2 OR compaction is likely.** Store **IDENTIFIERS, not contents**: unit DAG + file-contention map; per-unit status (`pending→building→self-verified→panel-passed→merged`); open questions + **paths/queries to pull returns back on demand**; safety-rail decisions. Never paste full transcripts or diffs.
+Persist `reports/loop-<feature>.md` **whenever fan-out width is ≥2 - not optionally, and WRITTEN BEFORE THE FIRST BUILDER SPAWNS.** The ledger is what the unit census (section 6) counts against, so a ledger created after the fact cannot catch a unit that died early. Store **IDENTIFIERS, not contents**: unit DAG + file-contention map; per-unit status (`pending→building→self-verified→panel-passed→MERGED|DROPPED`, the last two terminal); open questions + **paths/queries to pull returns back on demand**; safety-rail decisions. Never paste full transcripts or diffs.
 
 Use a **git-tracked** path for resumable state - NOT a git-ignored report subdir. The file may contain only credential *names* (§5.7). A re-invoked/compacted lead resumes from the file without re-deriving the DAG.
 
@@ -210,6 +237,8 @@ Use a **git-tracked** path for resumable state - NOT a git-ignored report subdir
 
 - **Theater spawn** - a subagent whose context the lead already holds or could cheaply load.
 - **Stream-merge of conflicting work** - committing incompatible contracts without reconciling all N.
+- **A feature declared done without a unit census** - the count of dispatched units never reconciled against the count in a terminal state. This is how a half-finished unit ships with the batch and is found weeks later; a fan-out has no natural closing moment, so the closing moment has to be manufactured.
+- **A ledger row reading `merged` that the integration diff does not corroborate** - the note is a claim, the diff is the fact.
 - **Auto-rollback assumption** - believing a failed apply self-heals; confirm your rollback model (§5.6).
 - **Stale-base / un-refreshed-artifact green** - measuring green before rebase or the build/refresh step.
 - **Split triad** - apply in one unit, rollback/checkpoint in another.
