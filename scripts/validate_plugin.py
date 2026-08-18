@@ -78,6 +78,32 @@ for agent in glob.glob(os.path.join(base, "agents", "*.md")):
     if head is None or "name:" not in head or "description:" not in head:
         errors.append(f"agent {name}: frontmatter must include 'name' and 'description'")
 
+
+# marketplace two-copies rule (CLAUDE.md): byte-identical or the plugin ships two truths
+try:
+    _a = open(os.path.join(ROOT, "marketplace.json"), "rb").read()
+    _b = open(os.path.join(ROOT, ".claude-plugin", "marketplace.json"), "rb").read()
+    if _a != _b:
+        errors.append("marketplace.json: root and .claude-plugin copies are NOT byte-identical")
+except OSError as _e:
+    errors.append(f"marketplace copies unreadable: {_e}")
+
+# cross-references: every backticked .md/.py/.ps1 relative path in a skill file must resolve,
+# whether written as ../x or as a bare dir/x (codex F25 - the bare form escaped earlier checks)
+_REF = re.compile(r"`((?:\.\./)?[a-z0-9_-]+/[a-z0-9/_.-]+\.(?:md|py|ps1))`")
+for _md in glob.glob(os.path.join(base, "skills", "*", "*.md")):
+    _d = os.path.dirname(_md)
+    _text = open(_md, encoding="utf-8").read()
+    for _m in _REF.finditer(_text):
+        _ref = _m.group(1)
+        if _ref.startswith("tools/"):
+            continue  # target-repo convention (cards scaffolds tools/card_check.py THERE, not here)
+        _cand = [os.path.normpath(os.path.join(_d, _ref)),
+                 os.path.normpath(os.path.join(base, "skills", _ref)),
+                 os.path.normpath(os.path.join(base, _ref))]  # plugin root (agents/, hooks/, ci/)
+        if not any(os.path.exists(_c) for _c in _cand):
+            errors.append(f"{os.path.relpath(_md, ROOT)}: dead reference `{_ref}`")
+
 if errors:
     print("PLUGIN VALIDATION FAILED:")
     for e in errors:

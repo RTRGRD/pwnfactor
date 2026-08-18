@@ -13,7 +13,9 @@ description: Sets up and maintains SYSTEM CARDS in a repo - a versioned, per-sub
 every context boundary - compaction, a new session, a different agent. The result is re-derived
 decisions, violated invariants, and tokens burned re-discovering what was already known. Cards fix
 it only because they are (a) auto-discoverable, (b) updated as part of landing work, and
-(c) CHECKED - a stale card turns red instead of quietly lying.
+(c) CHECKED - a stale card turns red instead of quietly lying. The checker is TEXTUAL: it
+catches deletions and renames, which is most staleness; a symbol whose MEANING moved under
+the same name is caught only by rule 2's same-commit write-back. Know the split.
 
 **Core principle - truth travels with the clone.** Card content lives in the target repo,
 versioned, changed in the same commits as the code it describes. This skill carries only the
