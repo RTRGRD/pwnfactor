@@ -43,7 +43,8 @@ def main():
 
     def git(*args):
         return subprocess.run(["git", "-C", cwd, *args],
-                              capture_output=True, text=True, timeout=10)
+                              capture_output=True, text=True, timeout=10,
+                              encoding="utf-8", errors="replace")
 
     top = git("rev-parse", "--show-toplevel")
     if top.returncode != 0:
