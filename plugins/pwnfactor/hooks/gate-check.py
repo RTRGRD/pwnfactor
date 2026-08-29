@@ -42,8 +42,15 @@ def main():
     cwd = data.get("cwd") or os.getcwd()
 
     def git(*args):
+        # encoding pinned: on Windows, text=True decodes with the console
+        # codepage (cp1252), and a diff containing UTF-8 bytes (section signs,
+        # smart quotes, box drawing) crashes the reader thread with
+        # UnicodeDecodeError - the hook then half-prints a traceback before its
+        # verdict. Git emits UTF-8; decode it as UTF-8, and never let a byte
+        # the console cannot map kill the gate (errors="replace").
         return subprocess.run(["git", "-C", cwd, *args],
-                              capture_output=True, text=True, timeout=10)
+                              capture_output=True, text=True, timeout=10,
+                              encoding="utf-8", errors="replace")
 
     top = git("rev-parse", "--show-toplevel")
     if top.returncode != 0:
