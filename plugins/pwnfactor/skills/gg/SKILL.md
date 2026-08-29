@@ -119,6 +119,22 @@ whether a fix actually addressed the thing they raised, which a fresh agent stru
 Respawn only for a genuinely different surface, or when an independent second opinion is the point.
 See `../run/model-economics.md`, "the second mechanical rule".
 
+### 4c. Terminal dispositions, and the rounds cap (operator ruling, 2026-08-28)
+
+**Every finding reaches a TERMINAL state, and the review round ends when the table is full.**
+The states are exactly three: **FIXED** (with its proof), **REJECTED-with-argument** (the
+argument recorded where the finding was), or **DEFERRED-with-a-named-trigger** (what event
+revives it). A finding left open is a finding the next round re-discovers, and an adversarial
+reviewer given no terminal vocabulary is a finding GENERATOR with no off switch - the observed
+failure mode is a spec or a RAG surface circling for five, six, eight rounds while each round's
+findings partially overlap the last's. A disposition TABLE (one row per finding, one terminal
+state per row) is the round's exit artifact.
+
+**Rounds are capped: two rounds per artifact per feature, then ESCALATE to the operator** with
+the still-open rows rather than opening round three. Two rounds is enough for a reviewer to
+verify its own findings were addressed; a third round on the same artifact means the SPEC is
+contested, and that is an operator decision, not a review loop.
+
 ### 5. Cross-verify + dedupe (don't trust raw output)
 - Merge all findings; dedupe by `(file, line, issue)`.
 - For every **CRITICAL/HIGH** finding, open the actual code and confirm it before reporting. Drop anything you can't substantiate; demote speculative items to a "worth a look" list. Subagent output is a **lead, not a fact**.
@@ -134,8 +150,26 @@ Verdict:
 
 Write the report to the project's reports directory (default `reports/`, create it if absent) as `review-<short-desc>-<base-sha>.md`, including: scope, tier, DEPTH chosen and why, per-reviewer findings, the deduped verdict, and the exact diff range reviewed. Then report the verdict + top findings in chat and offer to apply fixes. (SKIP-depth reviews write no report file - the chat note and gate artifact are the record.)
 
+**Pair every review with a REAL EXECUTION (operator ruling, 2026-08-28).** A panel reads
+diffs; it does not run tests, and a `ship` verdict over a red guard suite has actually shipped -
+the panel approved prose that a grep-based boundary guard refused, and nobody had run the guards
+because the review machine could not. So `gg`'s verdict is INCOMPLETE until the project's
+mechanical checks (tests/lint/typecheck AND any repo guard suite) have run on an environment
+that can actually run them, and the report says WHERE they ran. **Panels argue; tests settle** -
+when a reviewer's finding and a passing test disagree, run the disputed case again rather than
+adjudicating by prose. Record what was EXECUTED in the gate artifact (see `executed` below),
+not only what was reviewed.
+
+**The stop-hook is a COMMIT-TIME check, not a to-do list (operator ruling, 2026-08-28).** The
+hook fires on every stop while uncommitted work exists - which, mid-swarm, is CONSTANTLY, and
+is correct: builders' work sits unproven by design until the wave's batteries pass. Re-running
+the panel on every nag is the loop-generator. The panel runs ONCE per feature on the assembled
+diff (section 6's rule); until that moment, the hook's complaint is acknowledged, not obeyed.
+
 **Gate artifact (for the stop-hook).** Also write `.pwnfactor/gate.json`:
-`{"head": "<HEAD sha>", "dirty_sha256": "<sha256 of git diff HEAD>", "verdict": "ship|fix-then-ship|block", "ts": "<iso8601 UTC>"}`.
+`{"head": "<HEAD sha>", "dirty_sha256": "<sha256 of git diff HEAD>", "verdict": "ship|fix-then-ship|block", "executed": ["<command that actually ran, with pass/fail counts>", ...], "ts": "<iso8601 UTC>"}`.
+`executed` records what was RUN, not what was reviewed - an empty list is legal and is itself the
+signal (a review-only gate), so a later reader can tell a tested ship from an argued one.
 `dirty_sha256` is the sha256 hex of the exact bytes `git diff HEAD` prints at review time (empty diff hashes the
 empty string) - compute it with the project's scripting, not by eye. It binds the gate to the CONTENT reviewed:
 `head` alone would let arbitrary uncommitted edits ride a passing gate, since HEAD does not move when the working

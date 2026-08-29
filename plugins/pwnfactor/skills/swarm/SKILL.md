@@ -240,6 +240,29 @@ Persist `reports/loop-<feature>.md` **whenever fan-out width is ≥2 - not optio
 
 Use a **git-tracked** path for resumable state - NOT a git-ignored report subdir. **The durable half is artifact PATHS (returned diffs and reports written to files); agent ids are session-scoped conveniences** - a fresh session or another machine cannot dereference an id, so any evidence a resume depends on must exist as a file the ledger points at. The file may contain only credential *names* (§5.7). A re-invoked/compacted lead resumes from the file without re-deriving the DAG.
 
+## 7b. The two non-negotiables, field-proven (operator ruling, 2026-08-28)
+
+A full production day ran this skill hard - ~20 agents, 7 waves, ~15 fix rounds, ZERO dead
+agents - and the operator's diagnosis of earlier failed projects ("going in circles, taking
+forever, dead agents everywhere") reduced to exactly two dropped disciplines. They are now
+non-negotiable, stated as what they FIX:
+
+1. **Ledger BEFORE fan-out, census BEFORE "done" - this is the entire dead-agent fix.** A dead
+   agent is not a crashed process; it is a unit nobody could notice was missing, because the
+   only record of the DAG lived in a context that rolled. The ledger written before the first
+   spawn is what the census counts against; a ledger written after the fact, or kept "in mind",
+   cannot catch a unit that died early - and the observed failure is a ledger file that says
+   "all units pending" while six are merged, which is WORSE than no ledger because it is
+   trusted. Every unit ends MERGED (corroborated by the integration diff) or DROPPED (with the
+   reason said out loud). No third state, no rounding.
+
+2. **Continue warm agents; NEVER respawn for round two - this is the biggest single speed
+   lever.** A fix round to the builder that owns the context costs one message and minutes; a
+   respawn re-reads the repo, re-derives the constraints, and re-makes the mistakes its
+   predecessor already burned a round learning past. Respawning on every red is the
+   taking-forever loop wearing a fresh-start costume. Respawn only for a genuinely different
+   surface or a deliberate independent second opinion.
+
 ## 8. Smells
 
 - **Theater spawn** - a subagent whose context the lead already holds or could cheaply load.
