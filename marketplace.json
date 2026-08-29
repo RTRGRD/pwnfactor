@@ -1,12 +1,12 @@
 {
   "name": "pwnfactor",
   "owner": { "name": "RTRGRD" },
-  "description": "Agentic engineering harness - a feature lifecycle spine, deliberate subagent orchestration, a risk-routed multi-agent review panel, a ground-truth validation gate, and a read-only pre-prod security sweep - installable into any project.",
+  "description": "Agentic engineering harness - a feature lifecycle spine, deliberate subagent orchestration, a risk-routed multi-agent review panel, a ground-truth validation gate, a read-only pre-prod security sweep, and system cards - installable into any project.",
   "plugins": [
     {
       "name": "pwnfactor",
       "source": "./plugins/pwnfactor",
-      "description": "Feature lifecycle + risk-routed review panel (code-review / simplifier / security Claude agents + optional Codex cross-model review) + a ground-truth validation gate + deliberate subagent-orchestration playbook + a read-only pre-prod security sweep. Token-efficient, safety-rail aware, works in solo mode with no backend."
+      "description": "Feature lifecycle + risk-routed review panel (code-review / simplifier / security Claude agents + optional Codex cross-model review) + a ground-truth validation gate + deliberate subagent-orchestration playbook + a read-only pre-prod security sweep + system cards (per-subsystem contracts and decisions, checker-enforced). Token-efficient, safety-rail aware, works in solo mode with no backend."
     }
   ]
 }

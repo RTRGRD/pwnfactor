@@ -2,8 +2,11 @@
 """pwnfactor stop-hook gate verifier - FAIL-OPEN, loop-safe.
 
 Fires on Stop (only where the pwnfactor plugin is enabled). If the working tree has
-uncommitted CODE changes that haven't passed /pwnfactor:gg (no fresh .pwnfactor/gate.json
-for the current HEAD), it nudges ONCE to run the review gate. It can never wedge a session:
+uncommitted CODE changes with no fresh .pwnfactor/gate.json for the current HEAD and
+content, it says so ONCE. The message is deliberately NOT an imperative to review right
+now: this gate closes at COMMIT time, and a lead that obeys it mid-build runs the panel,
+reports, and ends its turn with nothing in flight - which is the stall this plugin exists
+to prevent (skills/swarm/SKILL.md section 7c). It can never wedge a session:
 
   any error / non-git dir / missing input  -> allow (exit 0)
   stop_hook_active (already re-blocking)    -> allow  (one nudge per turn, never a loop)
@@ -28,6 +31,58 @@ CODE_BASENAMES = ("dockerfile", "makefile", "cmakelists.txt", "justfile", "rakef
 
 def allow():
     sys.exit(0)
+
+
+def emit(text):
+    """Write the verdict to stderr, normalizing anything the console cannot map.
+
+    The 0.9.1 fix pinned the DECODE side (git's UTF-8 output). This is the ENCODE
+    side, and the honest scope is narrower: CPython forces `backslashreplace` on
+    stderr, so a bare write does NOT raise even on a strict cp1252 console -
+    VERIFIED, not assumed. What it does instead is render a smart quote or an arrow
+    from the repo-authored last-gate line as escape noise. Round-tripping through
+    the stream's own encoding keeps the nag readable, and keeps the message from
+    depending on a CPython stderr detail that is not part of any contract.
+    """
+    try:
+        enc = getattr(sys.stderr, "encoding", None) or "utf-8"
+        sys.stderr.write(text.encode(enc, "replace").decode(enc, "replace"))
+    except Exception:
+        try:
+            sys.stderr.write(text.encode("ascii", "replace").decode("ascii"))
+        except Exception:
+            pass  # unwritable stderr must not turn the verdict into a traceback
+
+
+def last_gate_line(gate):
+    """One line naming what the LAST gate actually EXECUTED. Never raises.
+
+    A gate artifact records `executed` (gg section 6). An absent or empty list is
+    legal and is itself the signal: the last ship was argued, not tested. Any
+    malformed shape degrades to no line at all - this is decoration on a nag, and
+    it must never cost the nag itself.
+    """
+    if not isinstance(gate, dict):
+        return ""
+    try:
+        verdict = str(gate.get("verdict", "?")).strip()[:24] or "?"
+        executed = gate.get("executed")
+        if isinstance(executed, str):
+            executed = [executed]
+        # flatten CR/LF/TAB: this is repo-authored text landing in a one-line report,
+        # and a stray newline would forge extra lines of hook output.
+        flat = {ord("\n"): " ", ord("\r"): " ", ord("\t"): " "}
+        items = ([str(x).translate(flat).strip() for x in executed if str(x).strip()]
+                 if isinstance(executed, (list, tuple)) else [])
+        if not items:
+            return "Last gate (%s): review-only - no execution recorded.\n" % verdict
+        shown = "; ".join(items[:2])
+        if len(shown) > 180:
+            shown = shown[:177] + "..."
+        more = " (+%d more)" % (len(items) - 2) if len(items) > 2 else ""
+        return "Last gate (%s) executed: %s%s\n" % (verdict, shown, more)
+    except Exception:
+        return ""
 
 
 def main():
@@ -83,10 +138,21 @@ def main():
     head = git("rev-parse", "HEAD")
     head_sha = head.stdout.strip() if head.returncode == 0 else ""
     gate_path = os.path.join(repo, ".pwnfactor", "gate.json")
-    if head_sha and os.path.exists(gate_path):
+
+    # Load ONCE, defensively: the pass-check below reads it, and so does the nag's
+    # last-gate line. A file that is missing, unreadable, malformed, or not even an
+    # object leaves `gate` as None and every consumer treats that as "no gate".
+    gate = None
+    try:
+        with open(gate_path, encoding="utf-8") as fh:
+            loaded = json.load(fh)
+        if isinstance(loaded, dict):
+            gate = loaded
+    except Exception:
+        gate = None
+
+    if head_sha and gate:
         try:
-            with open(gate_path, encoding="utf-8") as fh:
-                gate = json.load(fh)
             if gate.get("verdict") in ("ship", "fix-then-ship") and gate.get("head") == head_sha:
                 # Content binding: head alone lets uncommitted edits ride a passing gate
                 # (HEAD does not move when the working tree changes). When the gate carries
@@ -105,10 +171,14 @@ def main():
         except Exception:
             pass
 
-    sys.stderr.write(
-        "pwnfactor gate: uncommitted code changes haven't passed the review gate.\n"
-        "Run /pwnfactor:gg to review this diff (it writes .pwnfactor/gate.json), "
-        "or set PWNFACTOR_GATE_BYPASS=1 to skip. Disable: claude plugin disable pwnfactor.\n"
+    emit(
+        "pwnfactor gate: uncommitted code changes, no passing gate for this content.\n"
+        "This gate closes at COMMIT time; it is not a task for right now. If a build is\n"
+        "in flight (builders out, fix rounds pending), acknowledge this in ONE line and\n"
+        "KEEP ORCHESTRATING - do not end the turn here. Run /pwnfactor:gg ONCE on the\n"
+        "assembled diff when the feature is ready to commit.\n"
+        + last_gate_line(gate) +
+        "Skip: PWNFACTOR_GATE_BYPASS=1 | Off: claude plugin disable pwnfactor\n"
     )
     sys.exit(2)  # block once; Claude re-enters and stop_hook_active prevents a loop
 

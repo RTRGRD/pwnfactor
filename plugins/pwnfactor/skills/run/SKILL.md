@@ -31,7 +31,13 @@ Trivial change (typo, one-liner, obvious fix)? Skip this and just do it. This is
 
 ### 3. Build
 - **Solo:** implement directly, matching surrounding idioms. Keep a running note of decisions/open items for long features (so context stays compaction-friendly).
-- **Orchestrated:** follow `swarm` - worktree isolation for parallel mutation, no commits from parallel agents.
+- **Orchestrated:** follow `swarm` - worktree isolation for parallel mutation, no commits from
+  parallel agents, and its **section 7c**: never end a turn with the plan non-empty and zero
+  builders in flight, and treat each completion notification as a work order rather than a status
+  line. That is what keeps a long build from going quiet halfway through.
+- **The stop-hook fires all the way through Build and that is expected** - uncommitted code with no
+  gate is the normal mid-build state. It is a commit-time check; acknowledge it in one line and keep
+  going. `gg` runs once, at Verify, on the assembled diff.
 - **Self-verify continuously:** run the narrowest test/build that proves each step. Don't accumulate unverified work.
 - **Safety rails (hard):** any fleet- / host- / data-mutating capability ships with dry-run + per-unit checkpoint + rollback. No exceptions. **Rollback means the strongest recovery the domain supports:** true state restoration where possible; a COMPENSATING action where reversal is physically impossible (a payment refunds, it does not un-happen; a forward-only migration recovers via expand/contract, not a down-migration). Naming which one applies is part of the unit's design.
 

@@ -3,11 +3,15 @@
 `hooks.json` registers a **Stop** hook → `gate-check.py`. It's the **enforcement layer** of pwnfactor's three-part gate, so even an always-on (ultracode-style) workflow can't quietly skip review:
 
 1. **Contract** - onboarding adds to `CLAUDE.md`: *code-touching changes run `/pwnfactor:gg` before integrate.*
-2. **Gate** - `/pwnfactor:gg` reviews the diff and writes `.pwnfactor/gate.json` (`head`, `verdict`, `ts`).
-3. **Hook (this)** - on Stop, verifies a fresh passing gate exists for the current HEAD.
+2. **Gate** - `/pwnfactor:gg` reviews the diff and writes `.pwnfactor/gate.json` (`head`, `dirty_sha256`, `verdict`, `executed`, `ts`).
+3. **Hook (this)** - on Stop, verifies a fresh passing gate exists for the current HEAD *and content*.
 
 ## What it does
-On stop, if the working tree has **uncommitted code changes** with no fresh `.pwnfactor/gate.json` matching the current HEAD (verdict `ship`/`fix-then-ship`), it **nudges once**: "run `/pwnfactor:gg`." Then it gets out of the way.
+On stop, if the working tree has **uncommitted code changes** with no fresh `.pwnfactor/gate.json` matching the current HEAD and diff hash (verdict `ship`/`fix-then-ship`), it says so **once**. Then it gets out of the way.
+
+**It reports a state; it does not hand out a task.** The message says the gate closes at **commit** time, and that a lead with a build in flight should acknowledge it in one line and keep orchestrating. That wording is load-bearing: the earlier "run `/pwnfactor:gg` to review this diff" read as an order, and a conscientious lead obeyed it mid-build - ran the panel, reported, ended the turn with nothing in flight, and went silent. See `../skills/swarm/SKILL.md` section 7c.
+
+When the gate is stale or missing, it also prints one line naming what the **last** gate recorded as `executed` (or "review-only - no execution recorded"), so you can see at a glance whether the previous ship was tested or argued. A missing or malformed field just omits the line.
 
 ## It cannot wedge a session (fail-open by design)
 - Any error, a non-git dir, or missing input → **allow** (exit 0).

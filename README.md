@@ -14,7 +14,7 @@ Mental model: **orchestration is the build loop, the panel is the verify gate, b
 
 ## The rest of the loadout
 
-Around that core sit four supporting skills:
+Around that core sit six supporting skills:
 
 - **`/pwnfactor:boot`** - onboard a repo once: it builds the orchestration profile, the `CLAUDE.md` gate contract, CI, and the security toolchain, then proves value on a real diff.
 - **`/pwnfactor:validate`** - the proof gate: check a change against a **ground-truth oracle** (did the REAL thing accept it?), not just review the diff. A green test suite is a claim until the real runtime, staging URL, or data store confirms it.

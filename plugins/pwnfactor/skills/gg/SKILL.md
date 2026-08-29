@@ -135,6 +135,22 @@ the still-open rows rather than opening round three. Two rounds is enough for a 
 verify its own findings were addressed; a third round on the same artifact means the SPEC is
 contested, and that is an operator decision, not a review loop.
 
+Copy this table into the report (section 6) and fill one row per finding. **The table is the
+round's exit artifact** - an empty `disposition` cell is an open round, so a round is over when
+the column has no blanks, not when the discussion runs out of steam:
+
+```
+| # | severity | file:line | finding | disposition | evidence / argument / trigger |
+|---|---|---|---|---|---|
+| 1 | HIGH   | api/auth.py:88 | predicate skipped on the admin path | FIXED    | pytest tests/authz -q -> 31 passed |
+| 2 | MEDIUM | core/fig.py:12 | figure rounds before caption          | REJECTED | rounding is the declared contract, see fig.py:5 |
+| 3 | NIT    | ui/table.tsx:40| column widths hardcoded               | DEFERRED | revives when the table becomes configurable |
+```
+
+FIXED carries its proof (a command and its output), REJECTED carries the argument, DEFERRED
+carries the EVENT that revives it. "Acknowledged", "noted", and "will consider" are not terminal
+states and do not close a row.
+
 ### 5. Cross-verify + dedupe (don't trust raw output)
 - Merge all findings; dedupe by `(file, line, issue)`.
 - For every **CRITICAL/HIGH** finding, open the actual code and confirm it before reporting. Drop anything you can't substantiate; demote speculative items to a "worth a look" list. Subagent output is a **lead, not a fact**.
@@ -165,11 +181,17 @@ hook fires on every stop while uncommitted work exists - which, mid-swarm, is CO
 is correct: builders' work sits unproven by design until the wave's batteries pass. Re-running
 the panel on every nag is the loop-generator. The panel runs ONCE per feature on the assembled
 diff (section 6's rule); until that moment, the hook's complaint is acknowledged, not obeyed.
+The hook's own message now says this in as many words, so it is not read as an order to review
+right now - and `swarm`'s section 7c covers the other half: acknowledging it costs one line, and
+the orchestration continues in the SAME turn.
 
 **Gate artifact (for the stop-hook).** Also write `.pwnfactor/gate.json`:
 `{"head": "<HEAD sha>", "dirty_sha256": "<sha256 of git diff HEAD>", "verdict": "ship|fix-then-ship|block", "executed": ["<command that actually ran, with pass/fail counts>", ...], "ts": "<iso8601 UTC>"}`.
 `executed` records what was RUN, not what was reviewed - an empty list is legal and is itself the
-signal (a review-only gate), so a later reader can tell a tested ship from an argued one.
+signal (a review-only gate), so a later reader can tell a tested ship from an argued one. **The
+stop-hook reads it back:** when it reports a stale or missing gate it prints one line naming what
+the LAST gate executed, or "review-only - no execution recorded". So the field is not archival -
+it is what the next session sees at a glance, and leaving it empty is a claim about this review.
 `dirty_sha256` is the sha256 hex of the exact bytes `git diff HEAD` prints at review time (empty diff hashes the
 empty string) - compute it with the project's scripting, not by eye. It binds the gate to the CONTENT reviewed:
 `head` alone would let arbitrary uncommitted edits ride a passing gate, since HEAD does not move when the working
