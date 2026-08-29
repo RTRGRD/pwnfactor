@@ -263,12 +263,55 @@ non-negotiable, stated as what they FIX:
    taking-forever loop wearing a fresh-start costume. Respawn only for a genuinely different
    surface or a deliberate independent second opinion.
 
+## 7c. Continuation: a lead does not stop, it dispatches (operator ruling, 2026-08-28)
+
+The chronic cross-repo failure is a lead that "just stops" mid-orchestration - half the units
+built, nothing announced, no error. It is almost never a model deciding it is finished. **It is a
+loop that ran out of re-invocations.** A lead runs on events; the event that wakes it is a
+background agent finishing. Take that away and the loop starves, and starving and thinking look
+identical from outside: silence.
+
+**So the ENGINE of continuation is background builders plus their completion notifications.** Two
+ways leads switch the engine off without noticing: running a unit INLINE (the turn is spent doing
+the work, and nothing is scheduled to wake it afterwards), and ending a turn with ZERO agents in
+flight. Four rules, in the order they bite:
+
+1. **Never end a turn with zero builders in flight while the plan is non-empty.** Before finishing
+   any turn, look at the ledger: if a non-terminal row exists and nothing is running, you have just
+   ended the orchestration. Spawn the next ready unit in the SAME turn, or state plainly that you
+   are stopping and why. An unannounced stop is the failure; a declared one is a decision.
+2. **Every completion notification is a WORK ORDER, not a status line.** On each wake, one motion:
+   adjudicate the return -> integrate it (or `SendMessage` the fix back to that same warm builder,
+   section 7b.2) -> verify -> spawn the next ready unit. Reading a return, reporting it, and ending
+   the turn is the stall in its purest form - the wave lands and the loop dies on arrival.
+3. **The ledger is the program counter on any wake.** Section 7's `reports/loop-<feature>.md` is not
+   a report, it is where the lead reads what to do next - especially after a compaction, where it is
+   the ONLY surviving copy of the DAG. First action on every wake: read it, act on the first
+   non-terminal row.
+4. **Blocked-on-one is never stopped-on-all.** A `BLOCKED` return (section 6) routes around itself:
+   its independent siblings keep moving while the lead re-briefs, re-barriers or escalates the one
+   unit. A whole fan-out idling behind a single blocked unit is the same starvation with a reason
+   attached.
+
+**And the stop-hook is not a stop signal.** `hooks/gate-check.py` fires on every stop while
+uncommitted code exists, which mid-swarm is constantly and is correct - builders' work is unproven
+by design until the wave's batteries pass. Its message says so, and says the gate closes at COMMIT
+time. Mid-build the right response is ONE line of acknowledgment and continued orchestration; the
+panel runs once, on the assembled diff, when the feature is ready to commit (section 6, and `gg`'s
+same ruling). A lead that obeys the nag mid-build runs the panel, reports, and ends the turn with
+nothing in flight - the hook then reads as the thing that caused the silence, which is exactly
+backwards.
+
 ## 8. Smells
 
 - **Theater spawn** - a subagent whose context the lead already holds or could cheaply load.
 - **Stream-merge of conflicting work** - committing incompatible contracts without reconciling all N.
 - **A feature declared done without a unit census** - the count of dispatched units never reconciled against the count in a terminal state. This is how a half-finished unit ships with the batch and is found weeks later; a fan-out has no natural closing moment, so the closing moment has to be manufactured.
 - **A ledger row reading `merged` that the integration diff does not corroborate** - the note is a claim, the diff is the fact.
+- **Turn ended with nothing in flight** - a non-empty plan and zero running agents. The loop has no
+  re-invocation coming, so the next thing the operator sees is silence (§7c).
+- **Obeying the stop-hook mid-build** - running the panel because the nag fired, rather than at
+  commit time on the assembled diff. This is the single most common way the stall starts (§7c).
 - **Auto-rollback assumption** - believing a failed apply self-heals; confirm your rollback model (§5.6).
 - **Stale-base / un-refreshed-artifact green** - measuring green before rebase or the build/refresh step.
 - **Split triad** - apply in one unit, rollback/checkpoint in another.

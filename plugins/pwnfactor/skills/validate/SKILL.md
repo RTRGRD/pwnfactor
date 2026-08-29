@@ -77,15 +77,23 @@ verdict vocabulary (`ship | fix-then-ship | block`) so a clean `validate` actual
 
 ```json
 { "head": "<current HEAD sha>", "verdict": "ship|fix-then-ship|block",
+  "executed": ["<command that actually ran, with pass/fail counts>", ...],
   "lanes": ["<lane>", ...], "oracle": "<what was read + its verdict>",
   "vacuous_checked": true, "codex": "ran|unavailable",
   "baseline_delta": "<capability % vs last, if measured>", "ts": "<iso8601 UTC>" }
 ```
 
+**Fill `executed`.** It is `gg`'s field (its section 6) and the stop-hook reads it back on a stale
+gate to say whether the last gate was tested or argued. `validate` of all skills RUNS things, so a
+`validate` artifact with an empty `executed` reports itself as review-only, which is a lie about
+the strongest gate in the harness. Record the deterministic tier's commands and their counts here;
+the RAW oracle evidence still goes in the report, not this file.
+
 The Stop-hook treats a `ship`/`fix-then-ship` whose `head` == the current commit (and, when present, whose
 `dirty_sha256` == sha256 of the current `git diff HEAD` - the content binding `gg` writes) as a passing gate; `block`,
-or a stale/missing artifact, means the gate hasn't passed. The hook reads only `head`+`verdict` - it CANNOT
-tell a `gg` artifact (diff-reviewed) from a `validate` one (oracle-validated); both write this same file. So
+or a stale/missing artifact, means the gate hasn't passed. Only `head`/`dirty_sha256`/`verdict` DECIDE that
+(`executed` is displayed on a stale gate, never used to pass one), and none of them tell a `gg` artifact
+(diff-reviewed) from a `validate` one (oracle-validated); both write this same file. So
 the hook enforces *"a gate passed for this HEAD,"* and the DISCIPLINE of running `validate` (not just `gg`)
 at Verify is what makes that gate mean *does-it-work*. `validate`'s artifact is a superset of `gg`'s (extra
 `lanes`/`oracle`/... fields the hook ignores). **`.pwnfactor/` is gitignored / ephemeral - keep RAW oracle
