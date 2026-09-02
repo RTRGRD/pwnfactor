@@ -117,6 +117,11 @@ Never let a spawned agent silently inherit the lead's effort. The lead runs hot;
 inheriting that tier burns budget without buying rigor - the same silent-inheritance trap as
 `model:`, in the other direction.
 
+**CONCURRENCY CAP (operator ruling, 2026-09-02).** Default ≤2 mutating builders in flight, ≤1 of them on
+Opus; read-only scouts are not counted. Raise it only with a named signal (disjoint components AND an
+uncontended verification lane) and write the number in the ledger. Every builder past the cap on a shared
+lane waits - and a waiting builder that wakes is a full-context resume (`run/model-economics.md`, third rule).
+
 **Operator's "extra/high/max mode"** is the EFFORT dial: deep thinking + generous per-agent token budget. It does NOT license fan-out. Max-effort can be SOLO (a security-sensitive refactor); a wide feature can run with medium leaves if its units are independent and low-risk.
 
 **Combining:** DEFAULT = solo lead, high effort, Opus; escalate only when a rule fires. The LEAD runs at the feature's tier or higher (it synthesizes + re-plans), may **PROPOSE** a downgrade to the operator (surfacing cost) but **never apply one silently**.
@@ -140,7 +145,12 @@ inheriting that tier burns budget without buying rigor - the same silent-inherit
    prose in a dispatch prompt. **Belt and braces:** omit `Agent` from a builder's
    `tools:` (or scope it with `Agent(<type>)`) so a worker structurally CANNOT spawn - a tools
    allowlist is enforced by the harness even where the env var is not set.
-9. **Bound the runaway.** Give builders a `maxTurns` proportional to the unit (a mechanical unit
+9. **Builders WRITE and RETURN; they do not wait.** No waiters, no polling loops, no "still waiting"
+   messages - each wake-up re-bills the builder's whole context. On a SHARED verification lane (profile:
+   `verification_lane: shared`) builders run no suites at all; the LEAD runs ONE battery per integration
+   on the deploy, and a builder's `proof` says `NOT RUN - lead's battery` as a fact. A builder that cannot
+   proceed returns `BLOCKED` as a value, once.
+10. **Bound the runaway.** Give builders a `maxTurns` proportional to the unit (a mechanical unit
    does not need 40 turns). An agent that has not converged in its budget is a spec gap to escalate,
    not a loop to extend - this is the harness-level version of "repeated auto-fix on the same red
    is a spec/contract gap" (section 6).
@@ -169,6 +179,9 @@ workaround, or stall waiting. Blocked-as-data lets the lead route (re-brief, re-
 blocked-as-silence stalls the whole fan-out behind one unit. Same rule for the lead: one BLOCKED
 unit never takes its independent siblings down - collect what settled, note what did not, and
 decide whether that is enough to continue.
+
+**The return is ≤ ~1.5K tokens.** A 6K-token report is read by a frontier lead at frontier prices, and
+its paths and counts are the only parts the lead acts on.
 
 `decisions` is load-bearing: the lead writes it into the cards at close-out, and **a rejected
 alternative dies with the worker's context if the worker does not report it.** Treat it as a **CLAIM**.
@@ -238,6 +251,11 @@ Integrate discipline `run` does - workers never do this, the lead ALWAYS does:
 
 Persist `reports/loop-<feature>.md` **whenever fan-out width is ≥2 - not optionally, and WRITTEN BEFORE THE FIRST BUILDER SPAWNS.** The ledger is what the unit census (section 6) counts against, so a ledger created after the fact cannot catch a unit that died early. Store **IDENTIFIERS, not contents**: unit DAG + file-contention map; per-unit status (`pending→building→self-verified→MERGED|DROPPED`, the last two terminal; there is NO per-unit panel state - the gate reviews the assembled whole diff once, so a `panel-passed` rung would describe a workflow that does not exist); open questions + **paths/queries to pull returns back on demand**; safety-rail decisions. Never paste full transcripts or diffs.
 
+**Builders never read the ledger.** The ledger is the lead's audit record and grows without bound
+(800 KB on a busy project). Keep a ONE-PAGE program counter beside it (`reports/CURRENT.md`: rules in
+force, what is deployed, what is in flight, what is next) and point briefs at THAT plus the exact files
+the unit touches; name a ledger section by heading when one is genuinely needed.
+
 Use a **git-tracked** path for resumable state - NOT a git-ignored report subdir. **The durable half is artifact PATHS (returned diffs and reports written to files); agent ids are session-scoped conveniences** - a fresh session or another machine cannot dereference an id, so any evidence a resume depends on must exist as a file the ledger points at. The file may contain only credential *names* (§5.7). A re-invoked/compacted lead resumes from the file without re-deriving the DAG.
 
 ## 7b. The two non-negotiables, field-proven (operator ruling, 2026-08-28)
@@ -257,7 +275,9 @@ non-negotiable, stated as what they FIX:
    reason said out loud). No third state, no rounding.
 
 2. **Continue warm agents; NEVER respawn for round two - this is the biggest single speed
-   lever.** A fix round to the builder that owns the context costs one message and minutes; a
+   lever - WHILE THE AGENT IS SMALL.** Above ~150K tokens a resume re-sends more context than a
+   fresh unit costs (`run/model-economics.md`, third rule): then spawn fresh with the diff path, or
+   fix it yourself if it is small. A fix round to the builder that owns the context costs one message and minutes; a
    respawn re-reads the repo, re-derives the constraints, and re-makes the mistakes its
    predecessor already burned a round learning past. Respawning on every red is the
    taking-forever loop wearing a fresh-start costume. Respawn only for a genuinely different
@@ -303,6 +323,14 @@ nothing in flight - the hook then reads as the thing that caused the silence, wh
 backwards.
 
 ## 8. Smells
+
+- **A builder that woke more than once.** Each wake-up is a full-context resume; ten wake-ups on a waiter
+  is a unit paid for ten times. The fix is the brief (return once), not the poll interval.
+- **A brief that says "read the ledger".** The ledger is the bill. Point at the one-page counter.
+- **Three or more mutating builders on a shared lane.** They serialize behind each other's suites and
+  poll while they wait; the census looks fine and the token bill does not.
+- **A resume to a 500K-token agent for a 20-line fix.** Do the fix.
+
 
 - **Theater spawn** - a subagent whose context the lead already holds or could cheaply load.
 - **Stream-merge of conflicting work** - committing incompatible contracts without reconciling all N.

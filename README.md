@@ -2,6 +2,22 @@
 
 A shared agentic engineering harness, distributed as a **Claude Code plugin** via this marketplace. Install it once per repo and every agent (and teammate) follows the same build-and-verify discipline.
 
+
+## 0.9.3 - cost discipline (2026-09-02)
+
+A production day burned ~9M Opus tokens on eight builders and emptied the operator's five-hour window
+in minutes. The cause was orchestration shape, not the work: 5-7 concurrent Opus builders polling a
+shared verification lane, a same-size fix round per unit, two Claude reviewers per unit, and builders
+told to read an 800 KB ledger. This release writes the counter-rules into the skills:
+
+- `run/model-economics.md` **third mechanical rule**: a warm agent has a WEIGHT - resuming re-sends the
+  whole transcript; above ~150K tokens spawn fresh (or fix it yourself); never resume an agent to wait;
+  cap what a builder reads (a one-page `reports/CURRENT.md`, not the ledger) and writes back (~1.5K).
+- `swarm` **concurrency cap** (≤2 mutating builders, ≤1 on Opus, by default); builders **write and
+  return** - no waiters, no polling, no suites on a shared lane (the lead runs one battery per
+  integration); the warm-agent rule read at two sizes; four new smells.
+- `gg` **cost ruling**: Codex alone is the default depth for ROUTINE; the Opus reviewer only on HIGH.
+
 ## The three legs
 
 The `pwnfactor` plugin adds three composable skills:

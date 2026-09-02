@@ -48,6 +48,11 @@ Apply this compact rubric (canonical, fuller version: `../run/risk-tiers.md`):
 
 **ROUTINE → Sonnet reviewers + regular Codex. HIGH → Opus reviewers + adversarial Codex. When in doubt, treat as HIGH.**
 
+**Cost ruling (operator, 2026-09-02): on a metered budget the default depth for a ROUTINE unit is CODEX
+alone; a Claude reviewer joins only at SOLO/PANEL when the diff carries real logic, and the doctrine-loaded
+Opus reviewer runs only on a HIGH signal. Two Claude reviewers on a mechanical slice is the same mistake
+as none on a migration, in the cheap direction - and it is the one that empties a five-hour window.**
+
 **Then scale the DEPTH to the footprint.** Risk sets the model tier; footprint sets how many
 reviewers run. Review effort is proportional to what could break - the full panel on every small
 diff is theater that burns tokens and rate limits:
