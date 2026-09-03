@@ -3,6 +3,16 @@
 A shared agentic engineering harness, distributed as a **Claude Code plugin** via this marketplace. Install it once per repo and every agent (and teammate) follows the same build-and-verify discipline.
 
 
+
+## 0.9.4 - verification ownership, the integration ritual, the cost receipt (2026-09-02)
+
+- `run` + `boot`: `verification_lane: shared | per-builder` decides WHO verifies; on a shared lane the lead
+  runs one battery per integration and a grade counts as a suite. `boot` writes the new profile keys and
+  creates `reports/CURRENT.md`.
+- `swarm`: a six-step INTEGRATION RITUAL for the lead (`git diff HEAD`, copy untracked, union/hand-merge,
+  rebuild shared ledgers from both sides, renumber collisions, one battery) and a `cost:` line in the fixed
+  return shape so every unit's token receipt lands in the ledger.
+
 ## 0.9.3 - cost discipline (2026-09-02)
 
 A production day burned ~9M Opus tokens on eight builders and emptied the operator's five-hour window

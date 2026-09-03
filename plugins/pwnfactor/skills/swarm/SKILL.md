@@ -165,6 +165,7 @@ another chance to be wrong about something already known. Require these fields:
 
 ```
 status:     green | red | BLOCKED         (see the failure rule below)
+cost:       <subagent_tokens from the return receipt - the lead copies it into the ledger>
 unit:       <unit id>
 files:      <paths touched>               (paths, never pasted diffs)
 proof:      <exact command> -> <verbatim test-runner output, pass/fail counts>
@@ -187,6 +188,15 @@ its paths and counts are the only parts the lead acts on.
 alternative dies with the worker's context if the worker does not report it.** Treat it as a **CLAIM**.
 - **Re-verify proportionally.** Independently re-run the exact cited command for every claim a merge/safety decision RESTS ON (riskiest unit's green, any safety-rail assertion, any contract consumers depend on). Spot-check low-risk units (read the diff, confirm the test exists). **Never act on a mutating or credential claim without re-running its cited proof.**
 - **"Verbatim output" means TEST-RUNNER output** (pytest/tsc/ruff/etc). **Host-command output can carry secrets - never paste it verbatim; record redacted proof + the redaction reason.**
+
+**INTEGRATION RITUAL (v0.9.4) - the lead's, numbered, because two of a day's defects were the lead's:**
+1. `git -C <worktree> diff HEAD > unit.diff` (staged AND unstaged - `git diff` alone drops what a builder staged);
+2. `git apply --3way unit.diff`; copy `git -C <worktree> ls-files --others --exclude-standard` for new files;
+3. markdown conflicts: union both sides; code conflicts: hand-merge and re-lint; a SHARED ledger file that
+   another slice also moved is REBUILT from both worktrees' versions, never taken wholesale;
+4. renumber colliding log entries (antipatterns, decision logs) at integrate and fix their references;
+5. record the unit's `subagent_tokens` receipt in the ledger's cost table beside its verdict;
+6. verify with ONE battery on the deploy (shared lane) before any dependent unit is briefed.
 
 **Re-plan from synthesis, don't stream-merge decisions.** When N agents return, read all N and reconcile *conflicts* (incompatible contracts) before committing those; but **independent, non-conflicting units merge as they land** (§3). Prefer a framework/DB-enforced invariant a subagent surfaced (a deny-by-default check; an FK `ON DELETE` cascade) over a brittle hardcoded list.
 

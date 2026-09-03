@@ -69,3 +69,10 @@ Recap what you set up (profile path, `CLAUDE.md` additions, CI files, Codex stat
 - **Idempotent:** profile / contract / CI already there? Show the diff and ask before touching anything.
 - **Solo mode:** no GitHub or no Codex? Skip those steps - the three Claude reviewers still have your six.
 - **Educational > flashy:** every slang line gets a plain-English translation. The jokes are seasoning, not the meal.
+
+## Profile keys added in v0.9.3-0.9.4 (write them at boot)
+
+`verification_lane: shared | per-builder` · `max_mutating_builders` (default 2) · `max_opus_builders`
+(default 1) · `resume_threshold_tokens` (default 150000) · and create `reports/CURRENT.md` - the one-page
+program counter briefs point at (rules in force, deployed, in flight, next, operator decisions) - so no
+brief ever says "read the ledger".
