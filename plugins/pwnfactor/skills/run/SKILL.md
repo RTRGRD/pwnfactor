@@ -98,3 +98,11 @@ context, so the next phase continues them instead of paying for a cold start.
 - `documentation-standards.md` - writing docs/comments without burning tokens.
 - `swarm` - the build-loop playbook (deliberate subagent fan-out).
 - `gg` - the verify gate.
+
+## Verification ownership is a PROJECT property (v0.9.4)
+
+Read the profile's `verification_lane`. `shared` (one box, one test database, one grading lane): builders
+WRITE and RETURN; the LEAD runs ONE battery per integration and owns every green; a builder's `proof`
+says `NOT RUN - lead's battery` as a fact. `per-builder` (each worktree can run the suite in isolation):
+the loop-until-green in `swarm` applies. A grade, a benchmark or any long-running measurement on a shared
+lane COUNTS AS A SUITE for the one-at-a-time rule. Never let two skills disagree about who verifies.

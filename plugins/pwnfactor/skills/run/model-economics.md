@@ -13,7 +13,7 @@ protected. Every Agent call sets `model:` explicitly. No exceptions.
 
 ## The second mechanical rule
 
-**A live subagent is a warm cache. Continue it; do not respawn.** Before every Agent call, check
+**A live subagent is a warm cache. Continue it; do not respawn - WHILE IT IS SMALL (see the third rule).** Before every Agent call, check
 whether an agent spawned earlier this session already holds the context this task needs. If one
 does, use `SendMessage` with its id instead - it resumes with its context intact, where a fresh
 Agent call re-reads every file from zero.
@@ -45,6 +45,36 @@ real reason - "I forgot the first one existed" is not).
 **Keep the ids.** When an Agent call returns, its id comes back with it. Record the ids alongside
 what each agent covered, so future-you can route a follow-up instead of re-deriving. An agent whose
 id you have dropped is work you have already paid for and thrown away.
+
+## The third mechanical rule: a warm agent has a WEIGHT
+
+**Resuming an agent re-sends its whole transcript.** `SendMessage` to a 500K-token builder costs more
+than a fresh agent's entire unit, and the bill repeats on every resume. Field-measured 2026-09-02 (The
+Hub): eight Opus builders at 350K-650K tokens each, a same-size fix round per unit, and one builder that
+woke itself ten times on a waiter - roughly 9M tokens in a day, and the operator's five-hour window
+gone in minutes. The warm-cache rule and this rule are the same rule read at two sizes:
+
+- **Read the receipt.** Every agent return carries `subagent_tokens`. Under ~150K, the second rule
+  holds: continue it. Above ~150K, a resume is the expensive path - spawn FRESH with a short brief and
+  the diff path (or do the fix yourself if it is under ~30 lines). Write the threshold in the profile.
+- **Never resume an agent to wait.** A builder that polls a shared lane, sets waiters, or sends
+  "still waiting" notes re-bills its context per wake-up. Builders return ONCE; a blocked builder
+  returns `BLOCKED` as a value (swarm section 6).
+- **Cap what a builder reads.** A brief that says "read the ledger" against an 800 KB ledger is the
+  context bill. Briefs point at a one-page program counter (`reports/CURRENT.md` or the profile's
+  equivalent) plus the exact files touched, and name sections by heading when a long file is needed.
+- **Cap what a builder writes back.** The fixed return shape, ~1.5K tokens. A 6K-token report is
+  read by a frontier lead at frontier prices.
+- **Cap concurrency, not just model.** The Anthropic 3-5 subagent figure is for READ-ONLY breadth. For
+  mutating builders the default is ≤2 in flight (≤1 on Opus); more is the dead-agent and merge-conflict
+  regime, and on a shared verification lane it is the contention regime that makes every builder wait
+  - and every wait is a resume.
+
+**Where verification runs is a cost decision too.** On a project with ONE shared verification lane
+(the profile's box, a single test database), builders that each run the full suite serialize behind
+each other and poll while they wait. Rule: builders write and return; the LEAD runs ONE battery per
+integration on the deploy. A builder may run a targeted file-level test only when it is isolated and
+seconds long. Say this in the profile (`verification_lane: shared`) so briefs inherit it.
 
 ## Where the frontier model earns its cost (keep IN the main loop)
 

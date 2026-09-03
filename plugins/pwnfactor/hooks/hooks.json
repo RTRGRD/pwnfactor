@@ -11,6 +11,30 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent|SendMessage",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/swarm-budget.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/swarm-budget.py\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
