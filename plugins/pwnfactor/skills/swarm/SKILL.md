@@ -155,6 +155,19 @@ lane waits - and a waiting builder that wakes is a full-context resume (`run/mod
    not a loop to extend - this is the harness-level version of "repeated auto-fix on the same red
    is a spec/contract gap" (section 6).
 
+## 5b. The brief carries the FAIL-CLOSED cases - the review's questions, asked before the code exists
+
+Every builder brief states, before any code: the GUARANTEE (one sentence a person can observe), the **fail-closed cases** -
+the inputs that MUST still be refused after the change (the coincidence that looks like the target, the identifier that
+contains the digits, the clearance that must not see the edge, the absence that is honest) - and the **mutations** the
+builder will watch red. These are exactly the questions an adversarial reviewer asks afterwards; asked at brief time they
+cost a paragraph, asked at review time they cost a fix round (measured 2026-09-09: every unit of the day needed one, and
+every finding was a fail-closed case the brief had not named). A brief that names only the target shape gets a unit that
+handles only the target shape.
+
+Rule of thumb for writing them: for each mechanism, ask *what input looks like the target but is not?* and *who must this
+never fire for?* - then write both down as exhibits the builder must prove RED before the fix and GREEN after.
+
 ## 6. The build → verify loop
 
 Hand the panel an **already green coherent diff**. The panel is the GATE, not the loop's first QA.
