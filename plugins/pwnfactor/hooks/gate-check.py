@@ -16,6 +16,7 @@ to prevent (skills/swarm/SKILL.md section 7c). It can never wedge a session:
 import sys
 import os
 import json
+import re
 import subprocess
 
 CODE_EXTS = (".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".rs", ".go", ".java", ".rb",
@@ -85,6 +86,74 @@ def last_gate_line(gate):
         return ""
 
 
+def load_gate_ignores(repo):
+    """0.9.9 - `.pwnfactor/gate-ignore`: gitignore-style globs for paths that must never
+    trip the gate (committed build output a deploy rewrites - `functions/lib/**`,
+    `dist/**` - or generated files). Measured 2026-09-10: one such directory made this
+    hook fire on every assistant turn for ~10 hours, ~120 tokens plus a re-entry turn
+    each time, with nothing to gate. Unreadable or missing file = no ignores."""
+    out = []
+    try:
+        with open(os.path.join(repo, ".pwnfactor", "gate-ignore"), encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip().replace("\\", "/")
+                if line and not line.startswith("#"):
+                    out.append(line)
+    except Exception:
+        pass
+    return out
+
+
+def glob_to_re(pat):
+    """`**` spans directories, `*` and `?` stay inside one segment; a pattern ending in
+    `/` matches everything under that directory."""
+    if pat.endswith("/"):
+        pat += "**"
+    out = ""
+    i = 0
+    while i < len(pat):
+        c = pat[i]
+        if pat.startswith("**", i):
+            out += ".*"; i += 2
+            if i < len(pat) and pat[i] == "/":
+                i += 1
+            continue
+        if c == "*":
+            out += "[^/]*"
+        elif c == "?":
+            out += "[^/]"
+        else:
+            out += re.escape(c)
+        i += 1
+    return re.compile("^" + out + "$")
+
+
+def is_ignored(path, patterns):
+    low = path.replace("\\", "/")
+    return any(glob_to_re(p).match(low) for p in patterns)
+
+
+def nag_fingerprint_matches(repo, fp):
+    """0.9.9 - one nag per CONTENT, not per turn. The docstring above always said
+    "says so ONCE"; `stop_hook_active` only prevented the same Stop from recursing.
+    The fingerprint (HEAD + the gate-relevant dirty hash) is cached in
+    `.pwnfactor/gate-nag.json`; an identical fingerprint on a later turn is silent."""
+    cache = os.path.join(repo, ".pwnfactor", "gate-nag.json")
+    try:
+        with open(cache, encoding="utf-8") as fh:
+            if json.load(fh).get("fingerprint") == fp:
+                return True
+    except Exception:
+        pass
+    try:
+        os.makedirs(os.path.dirname(cache), exist_ok=True)
+        with open(cache, "w", encoding="utf-8") as fh:
+            json.dump({"fingerprint": fp}, fh)
+    except Exception:
+        pass
+    return False
+
+
 def main():
     raw = "" if sys.stdin.isatty() else sys.stdin.read()
     data = json.loads(raw) if raw.strip() else {}
@@ -132,8 +201,12 @@ def main():
                 or (".github/workflows/" in low and low.endswith((".yml", ".yaml")))):
             code_changes.append(path)
 
+    ignores = load_gate_ignores(repo)
+    if ignores:
+        code_changes = [c for c in code_changes if not is_ignored(c, ignores)]
+
     if not code_changes:
-        allow()  # nothing code-ish uncommitted -> nothing to gate
+        allow()  # nothing code-ish uncommitted (outside the ignore list) -> nothing to gate
 
     head = git("rev-parse", "HEAD")
     head_sha = head.stdout.strip() if head.returncode == 0 else ""
@@ -168,8 +241,37 @@ def main():
                 have = hashlib.sha256(diff.stdout.encode("utf-8", "replace")).hexdigest()
                 if have == want:
                     allow()  # fresh passing gate for this exact content
+                # 0.9.9 - a gate written before a deploy rewrote an ignored build directory
+                # is still the gate for the CODE: compare the diff with the ignored paths
+                # excluded (git pathspec magic), and accept that hash too.
+                if ignores:
+                    excl = [":(exclude,glob)" + pat.rstrip("/") + ("/**" if pat.endswith("/") else "") for pat in ignores]
+                    fdiff = git("diff", "HEAD", "--", ".", *excl)
+                    if fdiff.returncode == 0:
+                        fhave = hashlib.sha256(fdiff.stdout.encode("utf-8", "replace")).hexdigest()
+                        if fhave == want:
+                            allow()
         except Exception:
             pass
+
+    # 0.9.9 - the nag is per content. Compute the same gate-relevant hash the check
+    # above would use and stay silent when this exact (HEAD, content) was already
+    # announced on an earlier turn.
+    try:
+        import hashlib
+        if ignores:
+            excl = [":(exclude,glob)" + pat.rstrip("/") + ("/**" if pat.endswith("/") else "") for pat in ignores]
+            cur = git("diff", "HEAD", "--", ".", *excl)
+        else:
+            cur = git("diff", "HEAD")
+        content_hash = hashlib.sha256(cur.stdout.encode("utf-8", "replace")).hexdigest() if cur.returncode == 0 else ""
+        fp = hashlib.sha256((head_sha + "|" + content_hash + "|" + "|".join(sorted(code_changes))).encode("utf-8")).hexdigest()
+        if nag_fingerprint_matches(repo, fp):
+            allow()  # already said once for this exact content
+    except SystemExit:
+        raise
+    except Exception:
+        pass
 
     emit(
         "pwnfactor gate: uncommitted code changes, no passing gate for this content.\n"
@@ -180,7 +282,7 @@ def main():
         + last_gate_line(gate) +
         "Skip: PWNFACTOR_GATE_BYPASS=1 | Off: claude plugin disable pwnfactor\n"
     )
-    sys.exit(2)  # block once; Claude re-enters and stop_hook_active prevents a loop
+    sys.exit(2)  # block once PER CONTENT (gate-nag.json); stop_hook_active prevents a same-Stop loop
 
 
 if __name__ == "__main__":

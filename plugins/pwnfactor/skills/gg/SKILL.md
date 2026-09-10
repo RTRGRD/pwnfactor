@@ -163,6 +163,36 @@ FIXED carries its proof (a command and its output), REJECTED carries the argumen
 carries the EVENT that revives it. "Acknowledged", "noted", and "will consider" are not terminal
 states and do not close a row.
 
+### 4e. Reviewer count, the reviewer packet, and the Codex cap (measured, 2026-09-10)
+
+Three reviewers each re-reading the same diff and the same call paths from filenames cost
+150k-300k tokens apiece on units where one reviewer found the same HIGH. The panel is sized by
+RISK FAMILY, not by habit:
+
+| Unit | Claude reviewers | Codex |
+|---|---|---|
+| MECHANICAL | none | regular, one pass |
+| ROUTINE with real logic | one correctness reviewer | regular, one pass |
+| HIGH, one risk family | the one matching specialist (security for egress/auth/secrets/input; correctness for money/state/concurrency) | adversarial, one pass |
+| HIGH, two independent families | two specialists | adversarial, one pass |
+| cross-domain CRITICAL, contested findings, or an explicit operator audit | full panel | adversarial |
+
+The simplifier is not a defect reviewer (its own contract says it does not hunt bugs); it runs
+on maintainability work by choice, never as part of the defect gate.
+
+**The reviewer packet.** A reviewer is dispatched with the material resolved, not a filename
+list to rediscover: the hunks (path:line ranges), the anchors (the production call site, the
+contract or type it honours, the test that pins it), the questions the risk family asks, and
+a scope cap (files, input bytes, turns). A dispatch that says "read the tree" pays each reviewer
+to redo the lead's recon. Record what the packet leaves OUT; a cross-cutting HIGH change escalates
+to a wider packet on the lead's say, never on the reviewer's.
+
+**The Codex cap.** One Codex pass per feature per diff hash; regular effort for ROUTINE, high for
+HIGH; the same packet (files and byte budget) as the Claude reviewers, never the whole tree.
+Measured 2026-09-10: two unscoped high-effort passes on a large repo each exhausted the plan's
+usage window before producing a finding. A capped pass that records its uncovered scope is a
+review; an uncapped pass that never finishes is not.
+
 ### 4d. Three standing questions every gate asks (measured, 2026-09-10)
 
 Ask these of every diff before dedupe; each has caught a green unit that shipped nothing:

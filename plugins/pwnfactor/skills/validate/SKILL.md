@@ -123,7 +123,7 @@ limit available," never fabricate certainty.
 
 `validate` is the *final* gate, not the only check: **self-verify** after every chunk (cheap -> always);
 **decision checkpoint** at each major decision BEFORE it's baked in - the lead's OWN fresh-context skeptic, not the panel (inside an orchestrated build the `gg` panel runs ONCE on the assembled diff, swarm section 6, and this file does not overrule that);
-**validate** at Integrate, on the whole, re-run after fixes. Reviews-at-decisions and the final gate catch
+**validate** at Integrate, on the whole; after fixes re-run the ORACLE lanes it selected (the deterministic tier and the ground truth), NOT the review panel - the panel's second look is gg's CONFIRM round (gg 4c), and a validate re-run that re-spawns reviewers is the loop 0.9.8 measured at 140k-390k tokens per round. Reviews-at-decisions and the final gate catch
 DIFFERENT failures (a wrong fork found after three commits vs a vacuous green) - you need both.
 
 ## See also
