@@ -369,6 +369,20 @@ backwards.
 - **Secret in notes/returns/host-output** - any secret material or raw host-command output on disk or in a payload.
 - **Down-tier creep** - running below the operator's chosen effort, or routing an auth/secret/command unit to the cheap tier because it "looks mechanical."
 - **Two failed fan-outs** - when a boundary collides twice, STOP-LOSS: finish solo.
+- **A verify agent per unit.** Measured 2026-09-11 on a ~10M-token program: five deploy-and-verify
+  agents at 380k-420k each in one day, one after every wave, each re-asking the same live battery.
+  The gate runs ONCE per assembled wave (§6); a deploy is a SCRIPT the lead runs (pull, build,
+  recreate, health, greps), and an agent is spent only on the live questions, once.
+- **Opus on a runbook.** Deploys, ledger edits, manifest regeneration, one-line fixes, commits: the
+  lead does them by script. Sonnet-high for well-specified breadth (parsers of stored data,
+  renderers, tests, docs); Opus only where §4 says so.
+- **An unbounded builder battery.** A brief that names no suites gets the full 13k-test suite run two
+  or three times per builder on a contended box. Name the suites; forbid the full run; one revert
+  control per claim.
+- **A finisher spawned onto a live builder.** A builder killed by a usage limit may still be alive
+  and report later; two finishers were spawned onto agents that then finished on their own, and one
+  worktree got two writers. Check the task list and the worktree diff before re-dispatching, never
+  two writers on one worktree.
 
 ## Worked example (Webcart)
 
