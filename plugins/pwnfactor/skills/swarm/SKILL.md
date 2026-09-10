@@ -88,6 +88,10 @@ answer to how many real edges survived.
 - Pipeline-merge ready units as they land. Await-all is **only** for the shared-contract decision and final whole-diff integration (§6).
 - A linear cross-component chain is **sequential handoffs, not parallel** - no concurrency, no worktrees.
 - **Width:** spawn no more parallel returns than the lead can reconcile in one synthesis pass - treat **~4 as a soft ceiling**, wave the rest.
+  **And a HARD cap on concurrent Opus builders: three.** Measured 2026-09-10 on a second program
+  (eight units): seven Opus builders at once ran ~2M tokens/hour and hit the 5-hour usage limit
+  twice, and a limit hit kills every builder mid-unit - the recovery costs more than the
+  parallelism bought. Queue the rest; a fourth slot is for a Sonnet leaf only.
 
 ## 4. Effort & model tiers
 
@@ -379,6 +383,21 @@ backwards.
 - **An unbounded builder battery.** A brief that names no suites gets the full 13k-test suite run two
   or three times per builder on a contended box. Name the suites; forbid the full run; one revert
   control per claim.
+- **A cold re-spawn where a warm resume was possible.** After a process restart the lead loses
+  its message handle, and the reflex is a NEW builder per fix round: measured 140k-390k tokens
+  per round, about a third of it re-reading a diff the dead builder already held. Check the task
+  list first (the agent may still be alive - see the finisher smell); if it is truly gone, brief
+  the fixer with the failing HUNK and the verbatim red, never the whole unit.
+- **A gate per fix round.** Each confirm round spawning a fresh builder round, five or six deep,
+  while the findings drift from criticals to mediums. Gate ONCE after the fix round; round two
+  CONFIRMS the disposition table and boards mediums, it does not reopen the review (gg 4c).
+- **Unqualified DDL from a builder.** `SET search_path=scratch,public; DROP TABLE IF EXISTS item`
+  destroyed a dev database: the scratch schema had no `item`, so the live one went. Every DROP,
+  ALTER or TRUNCATE in a builder command names its schema; a hook that refuses the bare form is
+  cheap and belongs in the project profile.
+- **A transaction "proved" on a fixture production never has.** Three units in one night proved
+  rollback on a non-autocommit test connection while production runs autocommit. The brief states
+  the production connection's autocommit setting and the DB lane uses that setting.
 - **A finisher spawned onto a live builder.** A builder killed by a usage limit may still be alive
   and report later; two finishers were spawned onto agents that then finished on their own, and one
   worktree got two writers. Check the task list and the worktree diff before re-dispatching, never
