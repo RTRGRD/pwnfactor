@@ -16,7 +16,9 @@ answers this table already gives.
 | `/pwnfactor:run` | the lifecycle spine: Frame -> Plan -> Build -> Verify -> Integrate | every non-trivial change |
 | `/pwnfactor:swarm` | deliberate subagent orchestration for a big feature (topology, effort, isolation) | big features, by choice |
 | `/pwnfactor:gg` | risk-routed review panel: code-review + simplifier + security + optional Codex | before you merge |
+| `/pwnfactor:tdd` | red-then-green for one change: failing test watched red for the right reason, made green, every guard proven able to fail, evidence report | during build, per guarantee |
 | `/pwnfactor:validate` | prove it against a ground-truth oracle, not just a green suite | after gg, before ship |
+| `/pwnfactor:compact` | compact on purpose at a task boundary after the state is written; audit what eats the window (agents, skills, MCP schemas, CLAUDE.md) | long sessions, before long waits |
 | `/pwnfactor:sweep` | read-only pre-prod security battery, GO / NO-GO | before prod pushes / big builds |
 | `/pwnfactor:ci` | wire + verify CI/CD (tailored tests, actor-gated @claude, weekly scan) | setting up or fixing CI |
 | `/pwnfactor:cards` | system cards: per-subsystem contracts + decisions with the WHY, checker-enforced | scaffold once, then per landing |
