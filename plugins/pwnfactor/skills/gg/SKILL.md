@@ -140,6 +140,13 @@ the still-open rows rather than opening round three. Two rounds is enough for a 
 verify its own findings were addressed; a third round on the same artifact means the SPEC is
 contested, and that is an operator decision, not a review loop.
 
+**Round two is a CONFIRM, not a second review.** It reads the disposition table and checks
+each FIXED row's proof; a MEDIUM or NIT it finds is boarded (DEFERRED with a trigger), never
+fixed-and-regated. Ship when no CRITICAL/HIGH remains open. Measured 2026-09-10 on an
+eight-unit program: ~35 gate rounds, the early ones finding real criticals (money moving
+backward, a security family widened, a delete erasing evidence) and the late ones mediums -
+each late round buying one more builder round at 140k-390k tokens.
+
 Copy this table into the report (section 6) and fill one row per finding. **The table is the
 round's exit artifact** - an empty `disposition` cell is an open round, so a round is over when
 the column has no blanks, not when the discussion runs out of steam:
@@ -155,6 +162,23 @@ the column has no blanks, not when the discussion runs out of steam:
 FIXED carries its proof (a command and its output), REJECTED carries the argument, DEFERRED
 carries the EVENT that revives it. "Acknowledged", "noted", and "will consider" are not terminal
 states and do not close a row.
+
+### 4d. Three standing questions every gate asks (measured, 2026-09-10)
+
+Ask these of every diff before dedupe; each has caught a green unit that shipped nothing:
+
+- **Name the production CALL SITE, or refuse.** "No production runner calls `sync()`" surfaced
+  in round seven of one feature. A function with tests and no caller is S4 - built, wired to
+  nothing - and a reviewer who cannot point at the line that invokes it in the deployed path
+  reports that, not `ship`.
+- **A verifier that compares NAMES has not verified.** Three schema verifiers passed a money
+  column stored as `numeric(14,0)`. Plant a mutation the verifier must catch - a money-scale
+  drift, a dropped NOT NULL, a same-named `CHECK (true)`, a same-named index of the wrong shape,
+  a same-named table in a shadowing schema - and watch it go red. A verifier never seen red is
+  decoration.
+- **Acceptance must be something the DEPLOYED code can report.** A scheduled 200-row page
+  cannot report an aggregate; if the acceptance criterion needs durable state or a
+  run-to-completion CLI, the unit ships that oracle or the criterion is unmeasurable.
 
 ### 5. Cross-verify + dedupe (don't trust raw output)
 - Merge all findings; dedupe by `(file, line, issue)`.
